@@ -1,7 +1,6 @@
 package com.wurmonline.server.behaviours;
 
 import com.wurmonline.server.Items;
-import com.wurmonline.server.NoSuchItemException;
 import com.wurmonline.server.items.Item;
 import com.wurmonline.server.items.ItemList;
 import com.wurmonline.server.zones.VolaTile;
@@ -126,18 +125,6 @@ class DeliverActionTests extends ActionBehaviourTest {
     }
 
     @Test
-    void testPlayerInventoryPackedAccidentally() {
-        Item inventory = new Item(ItemList.inventory);
-        inventory.setName("Real inventory");
-        contract.setData(inventory.getWurmId());
-        mod.action(action, creature, waystone, mod.getActionId(), 0);
-
-        assertFalse(creature.getInventory().getItems().contains(inventory));
-        assertFalse(inventory.isInFrontOf(creature));
-        assertTrue(creature.getCommunicator().getLastMessage().contains("in circles"));
-    }
-
-    @Test
     void testLargeItemsTooManyItemsInFrontOf() {
         contract.setData(pile.getWurmId());
         pile.insertItem(new Item(ItemList.acorn));
@@ -149,26 +136,5 @@ class DeliverActionTests extends ActionBehaviourTest {
         assertFalse(creature.getInventory().getItems().contains(pile));
         assertFalse(pile.isInFrontOf(creature));
         assertTrue(creature.getCommunicator().getLastMessage().contains("littered"));
-    }
-
-    @Test
-    void testFakeInventoryDestroyedAndItemsPlacedWhenCannotCarry() {
-        Item inventory = new Item(ItemList.inventory);
-        inventory.setName(PackContractAction.fakeInventoryName);
-        inventory.setWeight(100);
-        creature.setCarry(1);
-        creature.currentTile = new VolaTile(0);
-        contract.setData(inventory.getWurmId());
-        for (int i = 0; i < 50; i++) {
-            inventory.insertItem(new Item(ItemList.acorn));
-        }
-        Item[] toDeliver = inventory.getItems().toArray(new Item[0]);
-        mod.action(action, creature, inventory, mod.getActionId(), 0);
-
-        assertTrue(Items.wasDestroyed(inventory));
-
-        for (Item item : toDeliver) {
-            assertTrue(item.isInFrontOf(creature));
-        }
     }
 }

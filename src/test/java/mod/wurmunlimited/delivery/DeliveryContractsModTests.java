@@ -1,7 +1,6 @@
 package mod.wurmunlimited.delivery;
 
 import com.wurmonline.server.Items;
-import com.wurmonline.server.WurmId;
 import com.wurmonline.server.creatures.Creature;
 import com.wurmonline.server.creatures.Creatures;
 import com.wurmonline.server.economy.Economy;
@@ -20,42 +19,6 @@ import static org.mockito.Mockito.*;
 import static org.mockito.internal.verification.VerificationModeFactory.times;
 
 class DeliveryContractsModTests {
-
-    @Test
-    void testIsMultipleItemAction() throws Throwable {
-        DeliveryContractsMod deliveryContractsMod = new DeliveryContractsMod();
-        WurmId.setType(2);
-        InvocationHandler handler = deliveryContractsMod::isMultipleItemAction;
-        Method method = mock(Method.class);
-
-        Object[] args = new Object[] {deliveryContractsMod.packActionId, new long[] {1,2,3}};
-        assertTrue((Boolean)handler.invoke(null, method, args));
-        verify(method, never()).invoke(any(), any());
-    }
-
-    @Test
-    void testIsMultipleItemActionWrongItemType() throws Throwable {
-        DeliveryContractsMod deliveryContractsMod = new DeliveryContractsMod();
-        WurmId.setType(1);
-        InvocationHandler handler = deliveryContractsMod::isMultipleItemAction;
-        Method method = mock(Method.class);
-
-        Object[] args = new Object[] {deliveryContractsMod.packActionId, new long[] {1,2,3}};
-        assertFalse((Boolean)handler.invoke(null, method, args));
-        verify(method, never()).invoke(any(), any());
-    }
-
-    @Test
-    void testIsMultipleItemActionNotContract() throws Throwable {
-        DeliveryContractsMod deliveryContractsMod = new DeliveryContractsMod();
-        WurmId.setType(2);
-        InvocationHandler handler = deliveryContractsMod::isMultipleItemAction;
-        Method method = mock(Method.class);
-
-        Object[] args = new Object[] {(short)(deliveryContractsMod.packActionId + 1), new long[] {1,2,3}};
-        assertNull(handler.invoke(null, method, args));
-        verify(method, times(1)).invoke(null, args);
-    }
 
     @Test
     void testDestroyItem() throws Throwable {

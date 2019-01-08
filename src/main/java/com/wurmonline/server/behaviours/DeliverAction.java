@@ -63,12 +63,9 @@ public class DeliverAction implements ModAction, BehaviourProvider, ActionPerfor
                 if (itemId != -1L){
                     Item toDeliver = Items.getItem(itemId);
                     int itemTemplateId = toDeliver.getTemplateId();
-                    if (itemTemplateId == ItemList.inventory && !toDeliver.getName().equals(PackContractAction.fakeInventoryName)) {
-                        throw new NoSuchItemException("A real inventory was packed into delivery contract some how.");
-                    }
 
                     if (performer.canCarry(toDeliver.getFullWeight())) {
-                        if (itemTemplateId == ItemList.itemPile || itemTemplateId == ItemList.inventory) {
+                        if (itemTemplateId == ItemList.itemPile) {
                             for (Item item : toDeliver.getItems()) {
                                 performer.getInventory().insertItem(item);
                             }
@@ -85,14 +82,7 @@ public class DeliverAction implements ModAction, BehaviourProvider, ActionPerfor
                         return true;
 
                     } else {
-                        if (itemTemplateId == ItemList.inventory) {
-                            for (Item item : toDeliver.getItems()) {
-                                item.putItemInfrontof(performer);
-                            }
-                            Items.destroyItem(toDeliver.getWurmId());
-                        } else {
-                            toDeliver.putItemInfrontof(performer);
-                        }
+                        toDeliver.putItemInfrontof(performer);
                         Items.destroyItem(source.getWurmId());
                         performer.getCommunicator().sendNormalServerMessage("The spirits place the item" + (toDeliver.getItemCount() <= 1 ? "" : "s") + " in front of you.");
                         return true;

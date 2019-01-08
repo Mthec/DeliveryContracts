@@ -3,7 +3,6 @@ package mod.wurmunlimited.delivery;
 import com.wurmonline.server.FailedException;
 import com.wurmonline.server.Items;
 import com.wurmonline.server.Server;
-import com.wurmonline.server.WurmId;
 import com.wurmonline.server.behaviours.BehaviourList;
 import com.wurmonline.server.behaviours.DeliverAction;
 import com.wurmonline.server.behaviours.PackContractAction;
@@ -145,12 +144,6 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
                 "(JZZ)V",
                 () -> this::destroyItem);
 
-        // Add Pack Up to multipleItemActions action type.
-        manager.registerHook("com.wurmonline.server.behaviours.Actions",
-                "isMultipleItemAction",
-                "(S[J)Z",
-                () -> this::isMultipleItemAction);
-
         // Add delivery contracts to traders default inventory.
         manager.registerHook("com.wurmonline.server.economy.Shop",
                 "createShop",
@@ -163,19 +156,6 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
                 "swapOwners",
                 "()V",
                 () -> this::swapOwners);
-    }
-
-    Object isMultipleItemAction(Object o, Method method, Object[] args) throws InvocationTargetException, IllegalAccessException {
-        if (((short)args[0]) == packActionId) {
-            long[] targets = (long[])args[1];
-            for (long target : targets) {
-                if (WurmId.getType(target) != 2) {
-                    return false;
-                }
-            }
-            return true;
-        }
-        return method.invoke(o, args);
     }
 
     Object destroyItem(Object o, Method method, Object[] args) throws InvocationTargetException, IllegalAccessException {

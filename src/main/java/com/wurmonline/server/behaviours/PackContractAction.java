@@ -1,29 +1,23 @@
 package com.wurmonline.server.behaviours;
 
-import com.wurmonline.server.FailedException;
 import com.wurmonline.server.Items;
 import com.wurmonline.server.NoSuchItemException;
 import com.wurmonline.server.creatures.Creature;
-import com.wurmonline.server.items.*;
+import com.wurmonline.server.items.Item;
+import com.wurmonline.server.items.ItemList;
 import com.wurmonline.server.structures.Blocking;
 import com.wurmonline.server.villages.Village;
 import com.wurmonline.server.villages.VillageRole;
-import com.wurmonline.server.zones.VirtualZone;
-import com.wurmonline.server.zones.VolaTile;
 import com.wurmonline.server.zones.Zones;
 import mod.wurmunlimited.delivery.DeliveryContractsMod;
 import org.gotti.wurmunlimited.modsupport.actions.*;
 
-import java.io.IOException;
-import java.util.Arrays;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 import java.util.logging.Logger;
 
 public class PackContractAction implements ModAction, BehaviourProvider, ActionPerformer {
     private static final Logger logger = Logger.getLogger(PackContractAction.class.getName());
-    public static final String fakeInventoryName = "Fake Inventory";
     private final short actionId;
     private final ActionEntry actionEntry;
 
@@ -40,7 +34,7 @@ public class PackContractAction implements ModAction, BehaviourProvider, ActionP
     }
 
     // For testing.
-    public PackContractAction(short actionId) {
+    PackContractAction(short actionId) {
         this.actionId = actionId;
         actionEntry = null;
     }
@@ -79,20 +73,24 @@ public class PackContractAction implements ModAction, BehaviourProvider, ActionP
     public boolean action(Action action, Creature performer, Item target, short num, float counter) {
         if (num == actionId && canPack(performer, target)) {
             try {
-                if (target.getTemplateId() == ItemList.inventory && !target.getName().equals(fakeInventoryName)) {
-                    throw new NoSuchItemException("A real inventory was passed to pack delivery contract some how.");
+                if (target.getTemplateId() == ItemList.inventory) {
+                    throw new NoSuchItemException("Attempted to pack an inventory.");
                 }
-
                 Item source = Items.getItem(action.getSubjectId());
                 if (source.getData() == -1L) {
                     StringBuilder sb = new StringBuilder();
                     sb.append(target.getName());
                     sb.append(" (");
 
-                    if (target.getTemplateId() == ItemList.itemPile || target.getTemplateId() == ItemList.inventory) {
+                    if (target.getTemplateId() == ItemList.itemPile) {
                         int itemCount = 0;
                         float totalQL = 0;
                         Item[] items = target.getItems().toArray(new Item[0]);
+                        if (items.length > 99) {
+                            performer.getCommunicator().sendNormalServerMessage("It would not be possible to unpack that many items at the destination.");
+                            return true;
+                        }
+
                         float allSameQL = items[0].getQualityLevel();
                         for (Item item : items) {
                             ++itemCount;
@@ -121,39 +119,6 @@ public class PackContractAction implements ModAction, BehaviourProvider, ActionP
             } catch (NoSuchItemException e) {
                 performer.getCommunicator().sendNormalServerMessage("The spirits fly around in circles looking confused.");
                 logger.warning("An error occurred when trying to pack a delivery contract.  Possible explanation follows:");
-                e.printStackTrace();
-                return true;
-            }
-        }
-        return false;
-    }
-
-    @Override
-    public boolean action(Action action, Creature performer, Item[] targets, short num, float counter) {
-        if (num == actionId) {
-            try {
-                if (targets.length > 99) {
-                    performer.getCommunicator().sendNormalServerMessage("The spirits refuse to carry that many items.");
-                    return true;
-                }
-
-                Item parent = null;
-                try {
-                    parent = targets[0].getParent();
-                } catch (NoSuchItemException ignored) {
-                }
-
-                if (parent == null || parent.getTemplateId() != ItemList.itemPile || parent.getItemCount() != targets.length) {
-                    parent = ItemFactory.createItem(ItemList.inventory, 1, null);
-                    parent.setName(fakeInventoryName);
-                    for (Item item : targets) {
-                        parent.insertItem(item, true);
-                    }
-                }
-                return action(action, performer, parent, num, counter);
-            } catch (NoSuchTemplateException | FailedException e) {
-                performer.getCommunicator().sendNormalServerMessage("The spirits fly around in circles looking confused.");
-                logger.warning("Couldn't pack items.  Reason follows:");
                 e.printStackTrace();
                 return true;
             }

@@ -1,14 +1,10 @@
 package com.wurmonline.server.behaviours;
 
 import com.wurmonline.server.Items;
-import com.wurmonline.server.NoSuchItemException;
 import com.wurmonline.server.items.Item;
 import com.wurmonline.server.items.ItemList;
 import com.wurmonline.server.structures.Blocking;
 import org.junit.jupiter.api.Test;
-
-import java.util.HashSet;
-import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -139,56 +135,12 @@ class PackContractActionTests extends ActionBehaviourTest {
 
     @Test
     void testPackingTooManyItems() {
-        Set<Item> items = new HashSet<>();
         for (int i = 0; i < 100; i++) {
-            items.add(new Item(ItemList.acorn));
+            pile.insertItem(new Item(ItemList.acorn));
         }
 
-        assertTrue(mod.action(action, creature, items.toArray(new Item[0]), mod.getActionId(), 0));
+        assertTrue(mod.action(action, creature, pile, mod.getActionId(), 0));
         assertTrue(creature.getCommunicator().getLastMessage().contains("that many items"));
-    }
-
-    @Test
-    void testPacksPileIfAllItemsSelected() {
-        for (int i = 0; i < 50; i++) {
-            pile.insertItem(new Item(ItemList.acorn));
-        }
-        mod.action(action, creature, pile.getItems().toArray(new Item[0]), mod.getActionId(), 0);
-
-        assertEquals(pile.getWurmId(), contract.getData());
-    }
-
-    @Test
-    void testDoesNotPackPileIfNotAllItemsSelected() {
-        Item[] toPack = new Item[0];
-        for (int i = 0; i < 50; i++) {
-            pile.insertItem(new Item(ItemList.acorn));
-            if (i == 25)
-                toPack = pile.getItems().toArray(new Item[0]);
-        }
-        assert toPack.length != 0;
-        mod.action(action, creature, toPack, mod.getActionId(), 0);
-
-        assertNotEquals(-1, contract.getData());
-        assertNotEquals(pile.getWurmId(), contract.getData());
-    }
-
-    @Test
-    void testPacksItemsNotInPileInFakeInventory() throws NoSuchItemException {
-        Item[] toPack = new Item[0];
-        for (int i = 0; i < 50; i++) {
-            pile.insertItem(new Item(ItemList.acorn));
-            if (i == 25)
-                toPack = pile.getItems().toArray(new Item[0]);
-        }
-        assert toPack.length != 0;
-        mod.action(action, creature, toPack, mod.getActionId(), 0);
-
-        assertNotEquals(-1, contract.getData());
-        Item container =  Items.getItem(contract.getData());
-        assertEquals(ItemList.inventory, container.getTemplateId());
-        assertEquals(PackContractAction.fakeInventoryName, container.getName());
-        assertEquals(toPack.length, container.getItems().size());
     }
 
     // canPack
