@@ -76,6 +76,20 @@ class DeliverActionTests extends ActionBehaviourTest {
     }
 
     @Test
+    void testActionPileOfSmallItemsAreInserted() {
+        for (int i = 0; i < 10; i++) {
+            pile.insertItem(new Item(ItemList.acorn));
+        }
+        Item[] items = pile.getItemsAsArray();
+        contract.setData(pile.getWurmId());
+        mod.action(action, creature, waystone, mod.getActionId(), 0);
+
+        assertFalse(creature.getInventory().getItems().contains(pile));
+        assertEquals(items.length, creature.getInventory().getItemCount());
+        assertTrue(creature.getCommunicator().getLastMessage().contains("deliver"));
+    }
+
+    @Test
     void testActionLargeItemsArePlacedInFrontOf() {
         contract.setData(pile.getWurmId());
         pile.setWeight(100);

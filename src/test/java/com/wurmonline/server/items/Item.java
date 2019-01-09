@@ -85,12 +85,22 @@ public class Item {
     }
 
     public boolean insertItem(Item item, boolean unconditionally) {
+        if (item.parent != null)
+            item.parent.removeItem(item);
         item.parent = this;
         return items.add(item);
     }
 
+    private void removeItem(Item item) {
+        items.remove(item);
+    }
+
     public Set<Item> getItems() {
         return items;
+    }
+
+    public Item[] getItemsAsArray() {
+        return items.toArray(new Item[0]);
     }
 
     public int getItemCount() {

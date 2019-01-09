@@ -66,7 +66,7 @@ public class DeliverAction implements ModAction, BehaviourProvider, ActionPerfor
 
                     if (performer.canCarry(toDeliver.getFullWeight())) {
                         if (itemTemplateId == ItemList.itemPile) {
-                            for (Item item : toDeliver.getItems()) {
+                            for (Item item : toDeliver.getItemsAsArray()) {
                                 performer.getInventory().insertItem(item);
                             }
                             Items.destroyItem(toDeliver.getWurmId());
