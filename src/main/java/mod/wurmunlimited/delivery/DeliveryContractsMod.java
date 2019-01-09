@@ -34,7 +34,6 @@ import java.util.stream.Stream;
 public class DeliveryContractsMod implements WurmServerMod, Configurable, PreInitable, Initable, ItemTemplatesCreatedListener, ServerStartedListener {
     private static final Logger logger = Logger.getLogger(DeliveryContractsMod.class.getName());
     private static int templateId;
-    short packActionId = -1;
     private int contractPrice = MonetaryConstants.COIN_COPPER * 10;
     private boolean updateTraders = false;
     private boolean contractsOnTraders = true;
@@ -97,9 +96,7 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
 
     @Override
     public void onServerStarted() {
-        PackContractAction packAction = new PackContractAction();
-        ModActions.registerAction(packAction);
-        packActionId = packAction.getActionId();
+        ModActions.registerAction(new PackContractAction());
         ModActions.registerAction(new DeliverAction());
 
         if (updateTraders) {
