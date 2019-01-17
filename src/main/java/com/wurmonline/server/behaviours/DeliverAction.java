@@ -27,7 +27,7 @@ public class DeliverAction implements ModAction, BehaviourProvider, ActionPerfor
                 new int[] {
                       ActionTypes.ACTION_TYPE_ALWAYS_USE_ACTIVE_ITEM,
                       ActionTypes.ACTION_TYPE_QUICK
-                }).build();
+                }).range(4).build();
 
         ModActions.registerAction(actionEntry);
     }
@@ -41,8 +41,8 @@ public class DeliverAction implements ModAction, BehaviourProvider, ActionPerfor
     @Override
     public List<ActionEntry> getBehavioursFor(Creature performer, Item subject, Item target) {
         if (subject != null && target != null) {
-            if (subject.getTemplateId() == DeliveryContractsMod.getTemplateId() && subject.getData() != -1L) {
-                if (target.getTemplateId() == ItemList.villageToken || target.getTemplateId() == ItemList.waystone) {
+            if (subject.getTemplateId() == DeliveryContractsMod.getTemplateId() && subject.getItemCount() > 0) {
+                if (target.getTemplateId() == ItemList.villageToken || (target.getTemplateId() == ItemList.waystone && target.isPlanted())) {
                     return Collections.singletonList(actionEntry);
                 }
             }
@@ -59,34 +59,22 @@ public class DeliverAction implements ModAction, BehaviourProvider, ActionPerfor
             }
             try {
                 Item source = Items.getItem(action.getSubjectId());
-                long itemId = source.getData();
-                if (itemId != -1L){
-                    Item toDeliver = Items.getItem(itemId);
-                    int itemTemplateId = toDeliver.getTemplateId();
+                if (source.getItemCount() > 0){
 
-                    if (performer.canCarry(toDeliver.getFullWeight())) {
-                        if (itemTemplateId == ItemList.itemPile) {
-                            for (Item item : toDeliver.getItemsAsArray()) {
-                                performer.getInventory().insertItem(item);
-                            }
-                            Items.destroyItem(toDeliver.getWurmId());
-                        } else {
-                            performer.getInventory().insertItem(toDeliver);
-                        }
-                        Items.destroyItem(source.getWurmId());
-                        performer.getCommunicator().sendNormalServerMessage("The spirits deliver the item" + (toDeliver.getItemCount() <= 1 ? "" : "s") + " to you.");
-                        return true;
-
-                    } else if (performer.currentTile.getNumberOfItems(performer.currentTile.getDropFloorLevel(performer.getFloorLevel(true))) + (target.getItemCount() == 0 ? 1 : target.getItemCount()) > 99) {
+                    if (performer.currentTile.getNumberOfItems(performer.currentTile.getDropFloorLevel(performer.getFloorLevel(true))) + source.getItemCount() > 99) {
                         performer.getCommunicator().sendNormalServerMessage("The area is too littered with items already.");
-                        return true;
-
                     } else {
-                        toDeliver.putItemInfrontof(performer);
-                        Items.destroyItem(source.getWurmId());
-                        performer.getCommunicator().sendNormalServerMessage("The spirits place the item" + (toDeliver.getItemCount() <= 1 ? "" : "s") + " in front of you.");
-                        return true;
+                        for (Item item : source.getItems().toArray(new Item[0])) {
+                            DeliveryContractsMod.addWeightToBlock(performer, item.getWeightGrams());
+                            item.putItemInfrontof(performer);
+                        }
+                        //Items.destroyItem(source.getWurmId());
+                        source.setName("delivery contract");
+                        source.setDescription("");
+                        performer.getCommunicator().sendNormalServerMessage("The spirits place the item" + (source.getItemCount() == 1 ? "" : "s") + " in front of you.");
                     }
+
+                    return true;
                 }
             } catch (NoSuchItemException | NoSuchCreatureException | NoSuchPlayerException | NoSuchZoneException e) {
                 performer.getCommunicator().sendNormalServerMessage("The spirits fly around in circles looking confused.");

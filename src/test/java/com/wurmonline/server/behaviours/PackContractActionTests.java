@@ -6,6 +6,8 @@ import com.wurmonline.server.items.ItemList;
 import com.wurmonline.server.structures.Blocking;
 import org.junit.jupiter.api.Test;
 
+import java.util.Arrays;
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
@@ -23,21 +25,21 @@ class PackContractActionTests extends ActionBehaviourTest {
 
     @Test
     void testGetBehaviourFor() {
-        contract.setData(1);
-        assertNull(mod.getBehavioursFor(creature, contract, waystone));
+        assert contract.getItemCount() == 0;
+        assertNull(mod.getBehavioursFor(creature, contract, itemToPack));
     }
 
     @Test
     void testGetBehaviourForNotSetContract() {
-        contract.setData(-1);
-        assertNotNull(mod.getBehavioursFor(creature, contract, waystone));
+        assert contract.getItemCount() == 0;
+        assertNotNull(mod.getBehavioursFor(creature, contract, itemToPack));
     }
 
     @Test
     void testGetBehaviourForWrongItemType() {
-        contract.setData(1);
+        assert contract.getItemCount() == 0;
         contract.setTemplateId(contractTemplateId + 1);
-        assertNull(mod.getBehavioursFor(creature, contract, waystone));
+        assertNull(mod.getBehavioursFor(creature, contract, itemToPack));
     }
 
     @Test
@@ -53,13 +55,6 @@ class PackContractActionTests extends ActionBehaviourTest {
     }
 
     @Test
-    void testContractDataSetProperly() {
-        mod.action(action, creature, pile, mod.getActionId(), 0);
-
-        assertEquals(pile.getWurmId(), contract.getData());
-    }
-
-    @Test
     void testNameChangeWhenAssigned() {
         mod.action(action, creature, pile, mod.getActionId(), 0);
 
@@ -71,13 +66,6 @@ class PackContractActionTests extends ActionBehaviourTest {
         mod.action(action, creature, pile, mod.getActionId(), 0);
 
         assertTrue(creature.getCommunicator().getLastMessage().contains("spirits take"));
-    }
-
-    @Test
-    void testItemSentToVoid() {
-        mod.action(action, creature, pile, mod.getActionId(), 0);
-
-        assertTrue(pile.inTheVoid());
     }
 
     @Test
@@ -118,9 +106,10 @@ class PackContractActionTests extends ActionBehaviourTest {
             pile.insertItem(newItem);
         }
         pile.setName("Test");
+        Item[] items =  pile.getItemsAsArray();
         mod.action(action, creature, pile, mod.getActionId(), 0);
 
-        assertEquals("Test (avg. " + pile.getItems().stream().mapToDouble(Item::getQualityLevel).average().orElseThrow(RuntimeException::new) + "ql) x " + num * 2, contract.getDescription());
+        assertEquals("Test (avg. " + Arrays.stream(items).mapToDouble(Item::getQualityLevel).average().orElseThrow(RuntimeException::new) + "ql) x " + num * 2, contract.getDescription());
     }
 
     @Test
@@ -155,7 +144,7 @@ class PackContractActionTests extends ActionBehaviourTest {
     void testNotBlockItemOwnedByContractUserOrNobody() {
         pile.setOwnerId(creature.getWurmId());
         assertTrue(mod.action(action, creature, pile, mod.getActionId(), 0));
-        contract.setData(-1);
+        contract.getItems().clear();
         pile.setOwnerId(-10);
         assertTrue(mod.action(action, creature, pile, mod.getActionId(), 0));
     }

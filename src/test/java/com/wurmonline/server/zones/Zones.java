@@ -13,4 +13,8 @@ public class Zones {
     public static Village getVillage(TilePos tilePos, boolean isSurfaced) {
         return village;
     }
+
+    public static Zone getZone(int x, int y, boolean isOnSurface) {
+        return new Zone();
+    }
 }

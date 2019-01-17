@@ -6,6 +6,7 @@ import com.wurmonline.server.items.Item;
 import com.wurmonline.server.items.ItemList;
 import com.wurmonline.server.structures.Blocking;
 import com.wurmonline.server.villages.Village;
+import com.wurmonline.server.zones.VolaTile;
 import mod.wurmunlimited.delivery.DeliveryContractsMod;
 import org.junit.jupiter.api.BeforeEach;
 
@@ -16,11 +17,11 @@ public class ActionBehaviourTest {
     Village village;
     int contractTemplateId = 12345;
     Item contract;
+    Item itemToPack;
     Item pile;
     Item waystone;
     Item villageToken;
     Action action;
-    public static final int bridgeId = 121;
 
     @BeforeEach
     void setUp() throws NoSuchFieldException, IllegalAccessException {
@@ -34,10 +35,13 @@ public class ActionBehaviourTest {
         creature = new Creature();
         village = new Village();
         creature.setVillageId(village.getId());
+        creature.currentTile = new VolaTile(0);
         contract = new Item(contractTemplateId);
+        itemToPack = new Item(ItemList.ironBar);
         pile = new Item(ItemList.itemPile);
-        pile.insertItem(new Item(ItemList.ironBar));
+        pile.insertItem(itemToPack);
         waystone = new Item(ItemList.waystone);
+        waystone.setPlanted(true);
         villageToken = new Item(ItemList.villageToken);
         action = new Action(contract.getWurmId());
 

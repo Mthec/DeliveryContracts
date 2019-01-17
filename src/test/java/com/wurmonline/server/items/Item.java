@@ -2,8 +2,8 @@ package com.wurmonline.server.items;
 
 import com.wurmonline.math.TilePos;
 import com.wurmonline.server.Items;
-import com.wurmonline.server.behaviours.ActionBehaviourTest;
 import com.wurmonline.server.creatures.Creature;
+import com.wurmonline.server.creatures.NoSuchCreatureException;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -24,6 +24,13 @@ public class Item {
     private boolean planted;
     private Item parent = null;
     private int weight = 0;
+    private Set<Creature> watchers;
+    public boolean mailed;
+    private long bridgeId = -10;
+
+    public boolean busy;
+    public boolean noTake;
+    public boolean draggable;
 
     public Item(int templateId) {
         this.templateId = templateId;
@@ -37,6 +44,10 @@ public class Item {
 
     public int getTemplateId() {
         return templateId;
+    }
+
+    public ItemTemplate getTemplate() {
+        return new ItemTemplate(templateId);
     }
 
     public void setData(long data) {
@@ -76,8 +87,31 @@ public class Item {
         this.ql = ql;
     }
 
+    public long getParentId() {
+        return parent.getWurmId();
+    }
+
     public Item getParent() {
         return parent;
+    }
+
+    public Item getParentOrNull() {
+        return parent;
+    }
+
+    public long getTopParent() {
+        Item toReturn = getTopParentOrNull();
+        return toReturn != this ? toReturn.getWurmId() : -10;
+    }
+
+    public Item getTopParentOrNull() {
+        Item toReturn = this;
+        Item parent = getParentOrNull();
+        while (parent != null) {
+            toReturn = parent;
+            parent = parent.getParentOrNull();
+        }
+        return toReturn != this ? toReturn : null;
     }
 
     public boolean insertItem(Item item) {
@@ -143,7 +177,7 @@ public class Item {
         this.planted = planted;
     }
 
-    public boolean getPlanted() {
+    public boolean isPlanted() {
         return planted;
     }
 
@@ -191,12 +225,16 @@ public class Item {
         return 0;
     }
 
+    public boolean isNoTake() {
+        return noTake;
+    }
+
     public boolean canBeDropped(boolean tradeCheck) {
         return true;
     }
 
     public long getBridgeId() {
-        return ActionBehaviourTest.bridgeId;
+        return bridgeId;
     }
 
     public TilePos getTilePos() {
@@ -207,19 +245,57 @@ public class Item {
         return true;
     }
 
-    public boolean isPlanted() {
-        return false;
-    }
-
     public void setWeight(int weight) {
         this.weight = weight;
     }
 
-    public int getWeightInGrams() {
+    public int getWeightGrams() {
         return weight;
     }
 
     public int getFullWeight() {
-        return weight + items.stream().mapToInt(Item::getWeightInGrams).sum();
+        return weight + items.stream().mapToInt(Item::getWeightGrams).sum();
+    }
+
+    public Creature[] getWatchers() throws NoSuchCreatureException {
+        if (watchers == null)
+            throw new NoSuchCreatureException("Watchers is null.");
+        return watchers.toArray(new Creature[0]);
+    }
+
+    public boolean isBusy() {
+        return busy;
+    }
+
+    public boolean isTent() {
+        return templateId == ItemList.tent;
+    }
+
+    public boolean isVehicle() {
+        return templateId == ItemList.cartLarge;
+    }
+
+    public float getPosX() {
+        return 1;
+    }
+
+    public float getPosY() {
+        return 1;
+    }
+
+    public float getPosZ() {
+        return 1;
+    }
+
+    public boolean isDraggable() {
+        return draggable;
+    }
+
+    public void setOnBridge(long bridgeId) {
+        this.bridgeId = bridgeId;
+    }
+
+    public void setLastMaintained(long time) {
+
     }
 }

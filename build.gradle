@@ -3,7 +3,7 @@ plugins {
 }
 
 group 'mod.wurmunlimited.delivery'
-version ''
+version '0.01'
 
 sourceCompatibility = 1.8
 def $shortName = 'deliverycontracts'
@@ -15,7 +15,7 @@ repositories {
 dependencies {
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.3.1'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.3.1'
-    testImplementation "org.mockito:mockito-inline:2.+";
+    testImplementation "org.mockito:mockito-inline:2.+"
     implementation fileTree(dir: 'E:/Steam/steamapps/common/Wurm Unlimited/WurmServerLauncher/', includes: ["modlauncher.jar", "javassist.jar", "server.jar"])
 }
 
@@ -32,5 +32,5 @@ jar {
     }
 
     includeEmptyDirs false
-    setArchivesBaseName $shortName
+    archiveName $shortName + '.jar'
 }

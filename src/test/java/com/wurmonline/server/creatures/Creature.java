@@ -1,6 +1,5 @@
 package com.wurmonline.server.creatures;
 
-import com.wurmonline.server.behaviours.ActionBehaviourTest;
 import com.wurmonline.server.items.Item;
 import com.wurmonline.server.items.ItemList;
 import com.wurmonline.server.zones.VolaTile;
@@ -13,6 +12,9 @@ public class Creature {
     private int carry = 100;
     public VolaTile currentTile = null;
     private static long nextWurmId = 50;
+    private Item draggedItem = null;
+
+    public long bridgeId = -10;
 
     public Creature() {
         communicator = new Communicator();
@@ -41,7 +43,7 @@ public class Creature {
     }
 
     public long getBridgeId() {
-        return ActionBehaviourTest.bridgeId;
+        return bridgeId;
     }
 
     public boolean canCarry(int weight) {
@@ -60,5 +62,17 @@ public class Creature {
         Item newItem = new Item(templateId);
         newItem.setQualityLevel(ql);
         return newItem;
+    }
+
+    public boolean isWithinDistanceTo(float x, float y, float z, float maxDistance) {
+        return true;
+    }
+
+    public VolaTile getCurrentTile() {
+        return currentTile;
+    }
+
+    public Item getDraggedItem() {
+        return draggedItem;
     }
 }
