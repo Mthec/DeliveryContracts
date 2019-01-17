@@ -33,7 +33,7 @@ class DeliverActionTests extends ActionBehaviourTest {
     }
 
     @Test
-    void testGetBehaviourForWrongItemType() {
+    void testGetBehaviourForWrongContractItemType() {
         contract.insertItem(itemToPack);
         contract.setTemplateId(contractTemplateId + 1);
         assertNull(mod.getBehavioursFor(creature, contract, waystone));
@@ -45,6 +45,14 @@ class DeliverActionTests extends ActionBehaviourTest {
         assertNotNull(mod.getBehavioursFor(creature, contract, waystone));
         assertNotNull(mod.getBehavioursFor(creature, contract, villageToken));
         assertNull(mod.getBehavioursFor(creature, contract, new Item(ItemList.itemPile)));
+    }
+
+    @Test
+    void testGetBehaviourForNotPlantedWaystone() {
+        contract.insertItem(itemToPack);
+        Item notPlantedWaystone = new Item(ItemList.waystone);
+        assert !notPlantedWaystone.isPlanted();
+        assertNull(mod.getBehavioursFor(creature, contract, notPlantedWaystone));
     }
 
     // action
@@ -63,6 +71,14 @@ class DeliverActionTests extends ActionBehaviourTest {
         mod.action(action, creature, waystone, mod.getActionId(), 0);
 
         assertFalse(Items.wasDestroyed(contract));
+    }
+
+    @Test
+    void testMissingContract() {
+        action.subjectId = -10;
+        mod.action(action, creature, waystone, mod.getActionId(), 0);
+
+        assertTrue(creature.getCommunicator().getLastMessage().contains("in circles"));
     }
 
     @Test
@@ -110,5 +126,23 @@ class DeliverActionTests extends ActionBehaviourTest {
         assertFalse(creature.getInventory().getItems().contains(itemToPack));
         assertFalse(itemToPack.isInFrontOf(creature));
         assertTrue(creature.getCommunicator().getLastMessage().contains("littered"));
+    }
+
+    @Test
+    void testSingleItemPlacedMessage() {
+        contract.insertItem(itemToPack);
+
+        mod.action(action, creature, waystone, mod.getActionId(), 0);
+        assertTrue(creature.getCommunicator().getLastMessage().contains("item"));
+        assertFalse(creature.getCommunicator().getLastMessage().contains("items"));
+    }
+
+    @Test
+    void testMultipleItemsPlacedMessage() {
+        contract.insertItem(itemToPack);
+        contract.insertItem(new Item(ItemList.acorn));
+
+        mod.action(action, creature, waystone, mod.getActionId(), 0);
+        assertTrue(creature.getCommunicator().getLastMessage().contains("items"));
     }
 }

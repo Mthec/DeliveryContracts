@@ -247,9 +247,6 @@ public class PackContractAction implements ModAction, BehaviourProvider, ActionP
     public boolean action(Action action, Creature performer, Item target, short num, float counter) {
         if (num == actionId && canPack(performer, target)) {
             try {
-                if (target.getTemplateId() == ItemList.inventory) {
-                    throw new NoSuchItemException("Attempted to pack an inventory.");
-                }
                 Item source = Items.getItem(action.getSubjectId());
                 if (source.getItemCount() == 0) {
                     StringBuilder sb = new StringBuilder();
@@ -259,15 +256,18 @@ public class PackContractAction implements ModAction, BehaviourProvider, ActionP
                     if (target.getTemplateId() == ItemList.itemPile) {
                         toPack = target.getItemsAsArray();
                     } else {
+                        // TODO - Is inventory order guaranteed?
                         Item parent = target.getParentOrNull();
                         List<Item> items = null;
                         if (parent != null) {
                             for (Item item : parent.getItemsAsArray()) {
                                 if (item.getTemplateId() == target.getTemplateId()) {
-                                    if (items == null && item == target) {
-                                        items = new ArrayList<>();
-                                    } else {
-                                        break;
+                                    if (items == null){
+                                        if(item == target) {
+                                            items = new ArrayList<>();
+                                        } else {
+                                            break;
+                                        }
                                     }
 
                                     items.add(item);
@@ -276,6 +276,9 @@ public class PackContractAction implements ModAction, BehaviourProvider, ActionP
 
                             if (items != null) {
                                 toPack = items.toArray(new Item[0]);
+                            } else {
+                                // TODO - Message?
+                                return true;
                             }
                         }
                     }
@@ -313,12 +316,11 @@ public class PackContractAction implements ModAction, BehaviourProvider, ActionP
                         if (allSameQL == -1)
                             sb.append("avg. ");
                         sb.append(totalQL / itemCount).append("ql) x ").append(itemCount);
-                    } else {
-                        sb.append(target.getQualityLevel()).append("ql)");
                     }
-
-                    // TODO - Any better value?
-                    source.setData(1);
+                    // TODO - Single items.
+                    // else {
+//                        sb.append(target.getQualityLevel()).append("ql)");
+//                    }
 
                     source.setName("delivery note");
                     source.setDescription(sb.toString());

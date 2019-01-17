@@ -5,7 +5,9 @@ import com.wurmonline.server.Items;
 import com.wurmonline.server.creatures.Creature;
 import com.wurmonline.server.creatures.NoSuchCreatureException;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 public class Item {
@@ -15,6 +17,7 @@ public class Item {
     private long id;
     private Creature inFrontOf;
     private Set<Item> items = new HashSet<>();
+    private List<Item> sortedItems = new ArrayList<>();
     private String name = "";
     private String description = "";
     private float ql = 1.0f;
@@ -122,11 +125,13 @@ public class Item {
         if (item.parent != null)
             item.parent.removeItem(item);
         item.parent = this;
-        return items.add(item);
+        items.add(item);
+        return sortedItems.add(item);
     }
 
     private void removeItem(Item item) {
         items.remove(item);
+        sortedItems.remove(item);
     }
 
     public Set<Item> getItems() {
@@ -134,7 +139,7 @@ public class Item {
     }
 
     public Item[] getItemsAsArray() {
-        return items.toArray(new Item[0]);
+        return sortedItems.toArray(new Item[0]);
     }
 
     public int getItemCount() {

@@ -7,12 +7,13 @@ import com.wurmonline.server.structures.Blocking;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class PackContractActionTests extends ActionBehaviourTest {
-    private PackContractAction mod = new PackContractAction((short)1);
+    private PackContractAction mod = new PackContractAction((short)1252);
 
     @Test
     void testGetActionId() {
@@ -24,28 +25,34 @@ class PackContractActionTests extends ActionBehaviourTest {
     // getBehavioursFor
 
     @Test
-    void testGetBehaviourFor() {
-        assert contract.getItemCount() == 0;
-        assertNull(mod.getBehavioursFor(creature, contract, itemToPack));
+    void testGetBehaviourForAlreadySetContract() {
+        contract.insertItem(new Item(ItemList.acorn));
+        assert contract.getItemCount() > 0;
+        assertNull(mod.getBehavioursFor(creature, contract, pile));
     }
 
     @Test
     void testGetBehaviourForNotSetContract() {
         assert contract.getItemCount() == 0;
-        assertNotNull(mod.getBehavioursFor(creature, contract, itemToPack));
-    }
-
-    @Test
-    void testGetBehaviourForWrongItemType() {
-        assert contract.getItemCount() == 0;
-        contract.setTemplateId(contractTemplateId + 1);
-        assertNull(mod.getBehavioursFor(creature, contract, itemToPack));
-    }
-
-    @Test
-    void testGetBehaviourForItem() {
         assertNotNull(mod.getBehavioursFor(creature, contract, pile));
     }
+
+    @Test
+    void testGetBehaviourForWrongContractItemType() {
+        assert contract.getItemCount() == 0;
+        contract.setTemplateId(contractTemplateId + 1);
+        assertNull(mod.getBehavioursFor(creature, contract, pile));
+    }
+
+
+    // TODO
+//    @Test
+//    void testGetBehaviourForWrongItemToPackType() {
+//        assert contract.getItemCount() == 0;
+//        contract.setTemplateId(contractTemplateId + 1);
+//        pile.noTake = true;
+//        assertNull(mod.getBehavioursFor(creature, contract, pile));
+//    }
 
     // action
 
@@ -69,6 +76,61 @@ class PackContractActionTests extends ActionBehaviourTest {
     }
 
     @Test
+    void testPlayerMessageForSingleItem() {
+        mod.action(action, creature, itemToPack, mod.getActionId(), 0);
+
+        assertTrue(creature.getCommunicator().getLastMessage().contains("spirits take"));
+        assertFalse(creature.getCommunicator().getLastMessage().contains("items"));
+        assertTrue(creature.getCommunicator().getLastMessage().contains(" it "));
+    }
+
+    @Test
+    void testPlayerMessageForMultiple() {
+        mod.action(action, creature, pile, mod.getActionId(), 0);
+
+        assertTrue(creature.getCommunicator().getLastMessage().contains("spirits take"));
+        assertTrue(creature.getCommunicator().getLastMessage().contains("items"));
+        assertTrue(creature.getCommunicator().getLastMessage().contains("them"));
+    }
+
+    @Test
+    void testSuccessOnItemPile() {
+        assertTrue(mod.action(action, creature, pile, mod.getActionId(), 0));
+        assertTrue(creature.getCommunicator().getLastMessage().contains("spirits take"));
+        assertEquals(1, contract.getItemCount());
+    }
+
+    @Test
+    void testSuccessOnInventoryGrouping() {
+        List<Item> items = Arrays.asList(
+                new Item(ItemList.acorn),
+                new Item(ItemList.acorn),
+                new Item(ItemList.acorn)
+        );
+        items.forEach(creature.getInventory()::insertItem);
+
+        assertTrue(mod.action(action, creature, creature.getInventory().getItemsAsArray()[0], mod.getActionId(), 0));
+        assertTrue(creature.getCommunicator().getLastMessage().contains("spirits take"));
+        assertEquals(3, contract.getItemCount());
+        assertTrue(contract.getItems().containsAll(items));
+    }
+
+    @Test
+    void testFailureOnMiddleOfInventoryGrouping() {
+        List<Item> items = Arrays.asList(
+                new Item(ItemList.acorn),
+                new Item(ItemList.acorn),
+                new Item(ItemList.acorn)
+        );
+        items.forEach(creature.getInventory()::insertItem);
+
+        assertTrue(mod.action(action, creature, creature.getInventory().getItemsAsArray()[1], mod.getActionId(), 0));
+        assertFalse(creature.getCommunicator().getLastMessage().contains("spirits take"));
+        assertEquals(0, contract.getItemCount());
+        assertTrue(creature.getInventory().getItems().containsAll(items));
+    }
+
+    @Test
     void testDescriptionSetForSingleItem() {
         Item toDeliver = new Item(ItemList.itemPile + 1);
         float ql = 25;
@@ -80,7 +142,7 @@ class PackContractActionTests extends ActionBehaviourTest {
     }
 
     @Test
-    void testDescriptionSetForPileItemSameQL() {
+    void testDescriptionSetForMultipleItemsSameQL() {
         float ql = 25;
         int num = 10;
         pile.getItems().clear();
@@ -96,7 +158,7 @@ class PackContractActionTests extends ActionBehaviourTest {
     }
 
     @Test
-    void testDescriptionSetForPileItemDifferentQL() {
+    void testDescriptionSetForMultipleItemsDifferentQL() {
         float ql = 25;
         int num = 10;
         pile.getItems().clear();
@@ -120,8 +182,6 @@ class PackContractActionTests extends ActionBehaviourTest {
         assertTrue(creature.getCommunicator().getLastMessage().contains("in circles"));
     }
 
-    // action Item[]
-
     @Test
     void testPackingTooManyItems() {
         for (int i = 0; i < 100; i++) {
@@ -131,6 +191,22 @@ class PackContractActionTests extends ActionBehaviourTest {
         assertTrue(mod.action(action, creature, pile, mod.getActionId(), 0));
         assertTrue(creature.getCommunicator().getLastMessage().contains("that many items"));
     }
+
+    @Test
+    void testAlreadyAssignedContractNotChanged() {
+        Item acorn = new Item(ItemList.acorn);
+        contract.insertItem(acorn);
+
+        assertTrue(mod.action(action, creature, pile, mod.getActionId(), 0));
+        assertTrue(contract.getItems().contains(acorn));
+        assertFalse(contract.getItems().contains(pile.getItems().iterator().next()));
+    }
+
+    // checkTake - Not tested directly.
+    // TODO
+
+    // actuallyTake - Not tested directly.
+    // TODO
 
     // canPack
 
