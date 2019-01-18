@@ -42,6 +42,7 @@ public class ActionBehaviourTest {
         itemToPack = new Item(ItemList.ironBar);
         pile = new Item(ItemList.itemPile);
         pile.insertItem(itemToPack);
+        pile.insertItem(new Item(ItemList.ironBar));
         waystone = new Item(ItemList.waystone);
         waystone.setPlanted(true);
         villageToken = new Item(ItemList.villageToken);

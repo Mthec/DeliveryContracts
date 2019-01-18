@@ -15,6 +15,8 @@ public class Vehicles {
 
     public static Vehicle createVehicle(Item item) {
         Vehicle newVehicle = new Vehicle(1232345);
+        newVehicle.seats = new Seat[] { new Seat(Seat.TYPE_DRIVER) };
+        newVehicle.hitched = new Seat[] { new Seat(Seat.TYPE_PASSENGER) };
         vehicles.put(item, newVehicle);
         return newVehicle;
     }

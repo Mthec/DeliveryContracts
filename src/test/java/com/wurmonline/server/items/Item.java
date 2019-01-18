@@ -38,6 +38,9 @@ public class Item {
     public boolean coin;
     public boolean liquid;
     public boolean banked;
+    public boolean sign;
+    public boolean streetLamp;
+    public boolean flag;
 
     public Item(int templateId) {
         this.templateId = templateId;
@@ -95,7 +98,7 @@ public class Item {
     }
 
     public long getParentId() {
-        return parent.getWurmId();
+        return parent != null ? parent.getWurmId() : -10;
     }
 
     public Item getParent() {
@@ -108,7 +111,9 @@ public class Item {
 
     public long getTopParent() {
         Item toReturn = getTopParentOrNull();
-        return toReturn != this ? toReturn.getWurmId() : -10;
+        if (toReturn == null)
+            return -10;
+        return toReturn.getWurmId();
     }
 
     public Item getTopParentOrNull() {
@@ -129,6 +134,7 @@ public class Item {
         if (item.parent != null)
             item.parent.removeItem(item);
         item.parent = this;
+        item.ownerId = ownerId;
         items.add(item);
         return sortedItems.add(item);
     }
@@ -176,6 +182,9 @@ public class Item {
 
     public void setOwnerId(long ownerId) {
         this.ownerId = ownerId;
+        for (Item item : items) {
+            item.setOwnerId(ownerId);
+        }
     }
 
     public long getOwnerId() {
@@ -199,7 +208,7 @@ public class Item {
     }
 
     public boolean isBeingWorkedOn() {
-        return false;
+        return busy;
     }
 
     public boolean isCoin() {
@@ -277,6 +286,18 @@ public class Item {
         return busy;
     }
 
+    public boolean isSign() {
+        return sign;
+    }
+
+    public boolean isStreetLamp() {
+        return streetLamp;
+    }
+
+    public boolean isFlag() {
+        return flag;
+    }
+
     public boolean isTent() {
         return templateId == ItemList.tent;
     }
@@ -311,5 +332,10 @@ public class Item {
 
     public boolean isEmpty(boolean b) {
         return getItemCount() == 0;
+    }
+
+    public void clear() {
+        items.clear();
+        sortedItems.clear();
     }
 }

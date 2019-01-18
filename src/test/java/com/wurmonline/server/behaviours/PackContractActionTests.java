@@ -1,6 +1,5 @@
 package com.wurmonline.server.behaviours;
 
-import com.wurmonline.server.Items;
 import com.wurmonline.server.items.Item;
 import com.wurmonline.server.items.ItemList;
 import com.wurmonline.server.structures.Blocking;
@@ -95,9 +94,10 @@ class PackContractActionTests extends ActionBehaviourTest {
 
     @Test
     void testSuccessOnItemPile() {
+        int count = pile.getItemCount();
         assertTrue(mod.action(action, creature, pile, mod.getActionId(), 0));
         assertTrue(creature.getCommunicator().getLastMessage().contains("spirits take"));
-        assertEquals(1, contract.getItemCount());
+        assertEquals(count, contract.getItemCount());
     }
 
     @Test
@@ -116,21 +116,6 @@ class PackContractActionTests extends ActionBehaviourTest {
     }
 
     @Test
-    void testFailureOnMiddleOfInventoryGrouping() {
-        List<Item> items = Arrays.asList(
-                new Item(ItemList.acorn),
-                new Item(ItemList.acorn),
-                new Item(ItemList.acorn)
-        );
-        items.forEach(creature.getInventory()::insertItem);
-
-        assertTrue(mod.action(action, creature, creature.getInventory().getItemsAsArray()[1], mod.getActionId(), 0));
-        assertFalse(creature.getCommunicator().getLastMessage().contains("spirits take"));
-        assertEquals(0, contract.getItemCount());
-        assertTrue(creature.getInventory().getItems().containsAll(items));
-    }
-
-    @Test
     void testDescriptionSetForSingleItem() {
         Item toDeliver = new Item(ItemList.itemPile + 1);
         float ql = 25;
@@ -145,7 +130,7 @@ class PackContractActionTests extends ActionBehaviourTest {
     void testDescriptionSetForMultipleItemsSameQL() {
         float ql = 25;
         int num = 10;
-        pile.getItems().clear();
+        pile.clear();
         for (int i = 0; i < num; i++) {
             Item newItem = new Item(ItemList.ironBar);
             newItem.setQualityLevel(ql);
@@ -161,7 +146,7 @@ class PackContractActionTests extends ActionBehaviourTest {
     void testDescriptionSetForMultipleItemsDifferentQL() {
         float ql = 25;
         int num = 10;
-        pile.getItems().clear();
+        pile.clear();
         for (int i = -num; i < num; i++) {
             Item newItem = new Item(ItemList.ironBar);
             newItem.setQualityLevel(ql + i);
@@ -171,15 +156,7 @@ class PackContractActionTests extends ActionBehaviourTest {
         Item[] items =  pile.getItemsAsArray();
         mod.action(action, creature, pile, mod.getActionId(), 0);
 
-        assertEquals("Test (avg. " + Arrays.stream(items).mapToDouble(Item::getQualityLevel).average().orElseThrow(RuntimeException::new) + "ql) x " + num * 2, contract.getDescription());
-    }
-
-    @Test
-    void testAttemptingToPackPlayerInventory() {
-        Item inventory = new Item(ItemList.inventory);
-        mod.action(action, creature, inventory, mod.getActionId(), 0);
-
-        assertTrue(creature.getCommunicator().getLastMessage().contains("in circles"));
+        assertEquals("Test (avg. " + (float)Arrays.stream(items).mapToDouble(Item::getQualityLevel).average().orElseThrow(RuntimeException::new) + "ql) x " + num * 2, contract.getDescription());
     }
 
     @Test
@@ -202,12 +179,18 @@ class PackContractActionTests extends ActionBehaviourTest {
         assertFalse(contract.getItems().contains(pile.getItems().iterator().next()));
     }
 
-    // checkTake - Not tested directly.
+    // checkTake
 
     private void testPackingBlocked(String messageFragment) {
         assertTrue(mod.action(action, creature, itemToPack, mod.getActionId(), 0));
         assertTrue(creature.getCommunicator().getLastMessage().contains(messageFragment));
         assertFalse(contract.getItems().contains(itemToPack));
+    }
+
+    private void testPackingNotBlocked() {
+        assertTrue(mod.action(action, creature, itemToPack, mod.getActionId(), 0));
+        assertTrue(creature.getCommunicator().getLastMessage().contains("take the item"));
+        assertTrue(contract.getItems().contains(itemToPack));
     }
 
     @Test
@@ -219,7 +202,7 @@ class PackContractActionTests extends ActionBehaviourTest {
     @Test
     void testOwnedBySomeoneElseNotAllowed() {
         itemToPack.setOwnerId(creature.getWurmId() + 1);
-        testPackingBlocked("not the owner");
+        testPackingBlocked("not own the");
     }
 
     @Test
@@ -231,14 +214,14 @@ class PackContractActionTests extends ActionBehaviourTest {
     @Test
     void testUnreachableNotAllowed() {
         itemToPack.mailed = true;
-        testPackingBlocked("unreachable");
+        testPackingBlocked("can't reach");
     }
 
     // TODO - Should be allowed if in container?
     @Test
     void testLiquidsNotAllowed() {
         itemToPack.liquid = true;
-        testPackingBlocked("liquid");
+        testPackingBlocked("pour");
     }
 
     @Test
@@ -269,7 +252,7 @@ class PackContractActionTests extends ActionBehaviourTest {
     @Test
     void testBlockedItemsNotAllowed() {
         Blocking.blocked = true;
-        testPackingBlocked("drag and drop");
+        testPackingBlocked("through the wall");
     }
 
     @Test
@@ -304,17 +287,6 @@ class PackContractActionTests extends ActionBehaviourTest {
         testPackingBlocked("steal");
     }
 
-    // actuallyTake - Not tested directly.
-    // TODO
-
-    // canPack
-
-    @Test
-    void testBlockItemOwnedByOther() {
-        pile.setOwnerId(creature.getWurmId() + 1);
-        assertFalse(mod.action(action, creature, pile, mod.getActionId(), 0));
-    }
-
     @Test
     void testNotBlockItemOwnedByContractUserOrNobody() {
         pile.setOwnerId(creature.getWurmId());
@@ -325,44 +297,39 @@ class PackContractActionTests extends ActionBehaviourTest {
     }
 
     @Test
-    void testBlockItemIfCannotReach() {
-        Blocking.blocked = true;
-        assertFalse(mod.action(action, creature, pile, mod.getActionId(), 0));
-    }
-
-    @Test
     void testBlockIfDoesNotHaveVillagePermissionToPickup() {
         village.getRoleFor(creature).setMayPickup(false);
-        assertFalse(mod.action(action, creature, pile, mod.getActionId(), 0));
+        testPackingBlocked("not have permission");
     }
 
     @Test
     void testNotBlockIfDoesHaveVillagePermissionToPickup() {
         village.getRoleFor(creature).setMayPickup(true);
-        assertTrue(mod.action(action, creature, pile, mod.getActionId(), 0));
+        testPackingNotBlocked();
     }
 
     @Test
     void testBlockIfDoesNotHaveVillagePermissionToPickupPlanted() {
         village.getRoleFor(creature).setMayPickup(false);
         village.getRoleFor(creature).setMayPickupPlanted(false);
-        pile.setPlanted(true);
-        assertFalse(mod.action(action, creature, pile, mod.getActionId(), 0));
+        itemToPack.setPlanted(true);
+        testPackingBlocked("not have permission");
+
     }
 
     @Test
     void testNotBlockIfDoesHaveVillagePermissionToPickupPlanted() {
         village.getRoleFor(creature).setMayPickupPlanted(true);
-        pile.setPlanted(true);
-        assertTrue(mod.action(action, creature, pile, mod.getActionId(), 0));
+        itemToPack.setPlanted(true);
+        testPackingNotBlocked();
     }
 
     private void trueCheck() {
-        assertTrue(mod.action(action, creature, pile, mod.getActionId(), 0));
+        assertNotNull(mod.getBehavioursFor(creature, contract, pile));
     }
 
     private void falseCheck() {
-        assertFalse(mod.action(action, creature, pile, mod.getActionId(), 0));
+        assertNull(mod.getBehavioursFor(creature, contract, pile));
     }
 
     private void falseTrueCheck() {
@@ -372,14 +339,10 @@ class PackContractActionTests extends ActionBehaviourTest {
 
     @Test
     void testManyBlockOptions() {
-        contract = spy(contract);
-        when(contract.getData()).thenReturn(-1L);
+        assert contract.getItemCount() == 0;
         pile = spy(pile);
         when(pile.getBridgeId()).thenReturn(creature.getBridgeId());
         village.getRoleFor(creature).setMayPickup(true);
-
-        Items.reset();
-        Items.addItems(contract, pile);
 
         when(pile.isInventory()).thenReturn(true, false);
         falseTrueCheck();
@@ -401,14 +364,15 @@ class PackContractActionTests extends ActionBehaviourTest {
         falseTrueCheck();
 
         when(pile.isBulkContainer()).thenReturn(true, true, false);
-        when(pile.getBulkNums()).thenReturn(5, 0);
+        when(pile.isEmpty(anyBoolean())).thenReturn(false, true);
         falseTrueCheck();
 
         when(pile.canBeDropped(anyBoolean())).thenReturn(false, true);
         falseTrueCheck();
 
-        when(pile.getBridgeId()).thenReturn(creature.getBridgeId() + 1, creature.getBridgeId());
-        falseTrueCheck();
+        // TODO - Wait till decision on bridge check.
+//        when(pile.getBridgeId()).thenReturn(creature.getBridgeId() + 1, creature.getBridgeId());
+//        falseTrueCheck();
 
         MethodsItems.isStealing = true;
         falseCheck();
@@ -416,4 +380,7 @@ class PackContractActionTests extends ActionBehaviourTest {
         MethodsItems.isStealing = false;
         trueCheck();
     }
+
+    // actuallyTake - Not tested directly.
+    // TODO
 }

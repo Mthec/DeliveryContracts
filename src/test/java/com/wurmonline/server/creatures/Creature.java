@@ -17,9 +17,10 @@ public class Creature {
     public long bridgeId = -10;
 
     public Creature() {
+        id = nextWurmId++;
         communicator = new Communicator();
         inventory = new Item(ItemList.inventory);
-        id = nextWurmId++;
+        inventory.setOwnerId(id);
     }
 
     public Communicator getCommunicator() {

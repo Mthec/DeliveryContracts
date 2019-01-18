@@ -18,6 +18,7 @@ import com.wurmonline.server.zones.VolaTile;
 import com.wurmonline.server.zones.Zone;
 import com.wurmonline.server.zones.Zones;
 import mod.wurmunlimited.delivery.DeliveryContractsMod;
+import mod.wurmunlimited.delivery.PackResult;
 import org.gotti.wurmunlimited.modsupport.actions.*;
 
 import java.util.ArrayList;
@@ -49,80 +50,67 @@ public class PackContractAction implements ModAction, BehaviourProvider, ActionP
         actionEntry = null;
     }
 
-    private boolean canPack(Creature performer, Item item) {
-        if (item.getOwnerId() != performer.getWurmId() && item.getOwnerId() != -10)
-            return false;
-        if (item.isInventory() || item.isBodyPart() || item.isBeingWorkedOn() || item.isCoin() || item.isMailed() ||
-                    item.isLiquid() || item.isFullprice() || item.isBanked() || item.isBulkItem() ||
-                    (item.isBulkContainer() && item.getBulkNums() != 0) || !item.canBeDropped(true) ||
-                    item.getBridgeId() != performer.getBridgeId() || MethodsItems.checkIfStealing(item, performer, null) ||
-                    Blocking.getBlockerBetween(performer, item, 4) != null)
-            return false;
-        Village v = Zones.getVillage(item.getTilePos(), item.isOnSurface());
-        if (v != null) {
-            VillageRole roles = v.getRoleFor(performer);
-            if (roles != null) {
-                if ((item.isPlanted() && !roles.mayPickupPlanted()) || !roles.mayPickup())
-                    return false;
-            }
-        }
-        return true;
-    }
-
     @Override
     public List<ActionEntry> getBehavioursFor(Creature performer, Item subject, Item target) {
         if (subject != null && target != null) {
-            if (subject.getTemplateId() == DeliveryContractsMod.getTemplateId() && subject.getItemCount() == 0 && canPack(performer, target)) {
+            if (subject.getTemplateId() == DeliveryContractsMod.getTemplateId() && subject.getItemCount() == 0 && !checkTake(performer, target).wasNotSuccessful()) {
                 return Collections.singletonList(actionEntry);
             }
         }
         return null;
     }
 
-    private TakeResultEnum checkTake(Creature performer, Item target) {
-        if (target.isBusy()) {
-            TakeResultEnum.TARGET_IN_USE.setIndexText(performer.getWurmId(), target.getName());
-            return TakeResultEnum.TARGET_IN_USE;
+    PackResult checkTake(Creature performer, Item target) {
+        if (target.isBeingWorkedOn()) {
+            return PackResult.TARGET_IN_USE(target.getName());
         } else {
             long ownId = target.getOwnerId();
             if (ownId != -10L && ownId != performer.getWurmId()) {
-                // TODO - Owned by someone else.
-                return TakeResultEnum.TARGET_HAS_NO_OWNER;
+                return PackResult.TARGET_HAS_DIFFERENT_OWNER(target.getName());
             }
 
             if (target.isCoin()) {
-                // TODO - Replace with no coins allowed.
-                return TakeResultEnum.INVENTORY_FULL;
+                return PackResult.TARGET_IS_COIN();
             }
 
-            if (target.mailed) {
-                return TakeResultEnum.TARGET_IS_UNREACHABLE;
+            if (target.isBodyPart()) {
+                return PackResult.YOU_CANNOT_FIT();
+            }
+
+            // TODO - Is this the best place for inventory check?
+            if (target.isMailed() || target.isBanked() || target.isInventory()) {
+                return PackResult.TARGET_IS_UNREACHABLE();
             }
 
             if (target.isLiquid()) {
-                return TakeResultEnum.TARGET_IS_LIQUID;
+                return PackResult.TARGET_IS_LIQUID();
             }
 
             if ((target.isBulkContainer() || target.isTent()) && !target.isEmpty(true)) {
-                return TakeResultEnum.TARGET_FILLED_BULK_CONTAINER;
+                return PackResult.TARGET_FILLED_BULK_CONTAINER();
             }
 
             if (target.isBulkItem()) {
-                return TakeResultEnum.TARGET_BULK_ITEM;
+                return PackResult.TARGET_BULK_ITEM();
             }
 
+            if (!target.canBeDropped(true) || target.isFullprice()) {
+                return PackResult.TARGET_CANNOT_BE_DROPPED(target.getName());
+            }
+
+            // TODO - What about hitched carts?
             if (target.isTent()) {
                 Vehicle vehicle = Vehicles.getVehicle(target);
                 if (vehicle != null && vehicle.getDraggers() != null && vehicle.getDraggers().size() > 0) {
-                    return TakeResultEnum.HITCHED;
+                    return PackResult.HITCHED();
                 }
             }
 
             try {
+                // TODO - What about different bridge?
                 BlockingResult result = Blocking.getBlockerBetween(performer, target, 4);
                 if (result != null) {
-                    TakeResultEnum.TARGET_BLOCKED.setIndexText(performer.getWurmId(), target.getName(), result.getFirstBlocker().getName());
-                    return TakeResultEnum.TARGET_BLOCKED;
+                    return PackResult.TARGET_BLOCKED(target.getName(), result.getFirstBlocker().getName());
                 }
 
                 if (!target.isNoTake()) {
@@ -133,8 +121,7 @@ public class PackContractAction implements ModAction, BehaviourProvider, ActionP
                     }
 
                     if (!sameVehicle && !performer.isWithinDistanceTo(target.getPosX(), target.getPosY(), target.getPosZ(), 5.0F)) {
-                        TakeResultEnum.TOO_FAR_AWAY.setIndexText(performer.getWurmId(), target.getName());
-                        return TakeResultEnum.TOO_FAR_AWAY;
+                        return PackResult.TOO_FAR_AWAY(target.getName());
                     }
 
                     Zone tzone = Zones.getZone((int)target.getPosX() >> 2, (int)target.getPosY() >> 2, target.isOnSurface());
@@ -144,18 +131,25 @@ public class PackContractAction implements ModAction, BehaviourProvider, ActionP
                         VolaTile tile2 = performer.getCurrentTile();
                         if (tile2 != null) {
                             if (tile.getStructure() != struct && (struct == null || !struct.isTypeBridge())) {
-                                performer.getCommunicator().sendNormalServerMessage("You can't reach the " + target.getName() + " through the wall.");
-                                return TakeResultEnum.TARGET_BLOCKED;
+                                return PackResult.TARGET_BLOCKED(target.getName(), "wall");
                             }
                         } else if (struct != null && !struct.isTypeBridge()) {
-                            performer.getCommunicator().sendNormalServerMessage("You can't reach the " + target.getName() + " through the wall.");
-                            return TakeResultEnum.TARGET_BLOCKED;
+                            return PackResult.TARGET_BLOCKED(target.getName(), "wall");
+                        }
+                    }
+
+                    Village village = Zones.getVillage(target.getTilePos(), target.isOnSurface());
+                    if (village != null) {
+                        VillageRole roles = village.getRoleFor(performer);
+                        if (roles != null) {
+                            if ((target.isPlanted() && !roles.mayPickupPlanted()) || !roles.mayPickup())
+                                return PackResult.INSUFFICIENT_VILLAGE_PERMISSIONS();
                         }
                     }
 
                     long toppar = target.getTopParent();
                     if (!MethodsItems.isLootableBy(performer, target)) {
-                        return TakeResultEnum.MAY_NOT_LOOT_THAT_ITEM;
+                        return PackResult.MAY_NOT_LOOT_THAT_ITEM();
                     }
 
                     boolean mayUseVehicle = true;
@@ -168,23 +162,21 @@ public class PackContractAction implements ModAction, BehaviourProvider, ActionP
                         }
 
                         if (!mayUseVehicle && target.lastOwner != performer.getWurmId() && (topParent.isVehicle() && topParent.getLockId() != -10L || Items.isItemDragged(topParent)) && performer.getDraggedItem() != topParent) {
-                            TakeResultEnum.VEHICLE_IS_WATCHED.setIndexText(performer.getWurmId(), topParent.getName());
-                            return TakeResultEnum.VEHICLE_IS_WATCHED;
+                            return PackResult.VEHICLE_IS_WATCHED(topParent.getName());
                         }
                     } catch (NoSuchItemException ignored) {}
 
                     if (MethodsItems.checkIfStealing(target, performer, null)) {
-                        TakeResultEnum.NEEDS_TO_STEAL.setIndexText(performer.getWurmId(), target.getName());
-                        return TakeResultEnum.NEEDS_TO_STEAL;
+                        return PackResult.NEEDS_TO_STEAL(target.getName());
                     }
 
-                    return TakeResultEnum.SUCCESS;
+                    return PackResult.SUCCESS();
                 }
             } catch (NoSuchZoneException var22) {
                 logger.log(Level.WARNING, var22.getMessage(), var22);
             }
         }
-        return TakeResultEnum.UNKNOWN_FAILURE;
+        return PackResult.UNKNOWN_FAILURE();
     }
     private void actuallyTake(Creature performer, Item target, Item contract) throws Exception {
         if (target.getTopParent() == target.getWurmId()) {
@@ -243,7 +235,7 @@ public class PackContractAction implements ModAction, BehaviourProvider, ActionP
     // TODO - Warning message when one item but multiple selected?  Only when item is in inventory?
     @Override
     public boolean action(Action action, Creature performer, Item target, short num, float counter) {
-        if (num == actionId && canPack(performer, target)) {
+        if (num == actionId) {
             try {
                 Item source = Items.getItem(action.getSubjectId());
                 if (source.getItemCount() == 0) {
@@ -251,33 +243,24 @@ public class PackContractAction implements ModAction, BehaviourProvider, ActionP
                     sb.append(target.getName()).append(" (");
 
                     Item[] toPack = new Item[0];
-                    if (target.getTemplateId() == ItemList.itemPile) {
+                    if (target.getItemCount() == 0 && target.getOwnerId() == -10) {
+                        toPack = new Item[] {target};
+                    } else if (target.getTemplateId() == ItemList.itemPile) {
                         toPack = target.getItemsAsArray();
                     } else {
-                        // TODO - Is inventory order guaranteed?
+                        // TODO - Is inventory order guaranteed?  Might just pack all of type?
+                        // TODO - Can't be type, maybe name?  Is the inventory always grouped by name?
+                        // TODO - Confirmation?
                         Item parent = target.getParentOrNull();
-                        List<Item> items = null;
+                        List<Item> items = new ArrayList<>();
                         if (parent != null) {
                             for (Item item : parent.getItemsAsArray()) {
-                                if (item.getTemplateId() == target.getTemplateId()) {
-                                    if (items == null){
-                                        if(item == target) {
-                                            items = new ArrayList<>();
-                                        } else {
-                                            break;
-                                        }
-                                    }
-
+                                if (item.getName().equals(target.getName())) {
                                     items.add(item);
                                 }
                             }
 
-                            if (items != null) {
-                                toPack = items.toArray(new Item[0]);
-                            } else {
-                                // TODO - Message?
-                                return true;
-                            }
+                            toPack = items.toArray(new Item[0]);
                         }
                     }
                     if (toPack.length > 0) {
@@ -286,10 +269,9 @@ public class PackContractAction implements ModAction, BehaviourProvider, ActionP
                             return true;
                         }
 
-                        // TODO - No Partial packing?
                         for (Item item : toPack) {
-                            TakeResultEnum result = checkTake(performer, item);
-                            if (result != TakeResultEnum.SUCCESS) {
+                            PackResult result = checkTake(performer, item);
+                            if (result.wasNotSuccessful()) {
                                 result.sendToPerformer(performer);
                                 return true;
                             }
@@ -312,19 +294,19 @@ public class PackContractAction implements ModAction, BehaviourProvider, ActionP
                             }
                         }
 
-                        if (allSameQL == -1)
-                            sb.append("avg. ");
-                        sb.append(totalQL / itemCount).append("ql) x ").append(itemCount);
+                        if (itemCount == 1) {
+                            sb.append(totalQL).append("ql)");
+                        } else {
+                            if (allSameQL == -1)
+                                sb.append("avg. ");
+                            sb.append(totalQL / itemCount).append("ql) x ").append(itemCount);
+                        }
                     }
-                    // TODO - Single items.
-                    // else {
-//                        sb.append(target.getQualityLevel()).append("ql)");
-//                    }
 
                     source.setName("delivery note");
                     source.setDescription(sb.toString());
 
-                    boolean isManyItems = toPack.length > 0;
+                    boolean isManyItems = toPack.length > 1;
                     performer.getCommunicator().sendNormalServerMessage(String.format("The spirits take the %s with a promise to return %s to the bearer of this note.",
                             (isManyItems ? "items" : "item"),
                             (isManyItems ? "them" : "it")));
@@ -336,6 +318,7 @@ public class PackContractAction implements ModAction, BehaviourProvider, ActionP
                 e.printStackTrace();
                 return true;
             }
+            return true;
         }
         return false;
     }
