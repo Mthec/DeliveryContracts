@@ -31,6 +31,8 @@ public class ActionBehaviourTest {
 
         Blocking.blocked = false;
         Items.reset();
+        Vehicles.reset();
+        MethodsItems.reset();
 
         creature = new Creature();
         village = new Village();

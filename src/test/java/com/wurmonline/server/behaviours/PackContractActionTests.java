@@ -203,7 +203,106 @@ class PackContractActionTests extends ActionBehaviourTest {
     }
 
     // checkTake - Not tested directly.
-    // TODO
+
+    private void testPackingBlocked(String messageFragment) {
+        assertTrue(mod.action(action, creature, itemToPack, mod.getActionId(), 0));
+        assertTrue(creature.getCommunicator().getLastMessage().contains(messageFragment));
+        assertFalse(contract.getItems().contains(itemToPack));
+    }
+
+    @Test
+    void testItemInUse() {
+        itemToPack.busy = true;
+        testPackingBlocked("in use");
+    }
+
+    @Test
+    void testOwnedBySomeoneElseNotAllowed() {
+        itemToPack.setOwnerId(creature.getWurmId() + 1);
+        testPackingBlocked("not the owner");
+    }
+
+    @Test
+    void testCoinsNotAllowed() {
+        itemToPack.coin = true;
+        testPackingBlocked("cannot pack coins");
+    }
+
+    @Test
+    void testUnreachableNotAllowed() {
+        itemToPack.mailed = true;
+        testPackingBlocked("unreachable");
+    }
+
+    // TODO - Should be allowed if in container?
+    @Test
+    void testLiquidsNotAllowed() {
+        itemToPack.liquid = true;
+        testPackingBlocked("liquid");
+    }
+
+    @Test
+    void testFilledBulkContainerAndTentNotAllowed() {
+        itemToPack.insertItem(new Item(ItemList.acorn));
+
+        itemToPack.setTemplateId(ItemList.bulkContainer);
+        testPackingBlocked("too heavy");
+
+        itemToPack.setTemplateId(ItemList.tent);
+        testPackingBlocked("too heavy");
+    }
+
+    // TODO - Better message?
+    @Test
+    void testBulkItemsNotAllowed() {
+        itemToPack.setTemplateId(ItemList.bulkItem);
+        testPackingBlocked("drag and drop");
+    }
+
+    @Test
+    void testHitchedTentsNotAllowed() {
+        itemToPack.setTemplateId(ItemList.tent);
+        Vehicles.createVehicle(itemToPack).addDragger(creature);
+        testPackingBlocked("hitched");
+    }
+
+    @Test
+    void testBlockedItemsNotAllowed() {
+        Blocking.blocked = true;
+        testPackingBlocked("drag and drop");
+    }
+
+    @Test
+    void testNoTakeNotAllowed() {
+        itemToPack.noTake = true;
+        testPackingBlocked("");
+    }
+
+    // TODO - Too far away.
+//    @Test
+//    void testBulkItemsNotAllowed() {
+//        itemToPack.setTemplateId(ItemList.bulkItem);
+//        testPackingBlocked("drag and drop");
+//    }
+
+    @Test
+    void testLootingNotAllowed() {
+        MethodsItems.isLootable = false;
+        testPackingBlocked("may not loot");
+    }
+
+    // TODO - Vehicle watched.
+//    @Test
+//    void testLootingNotAllowed() {
+//        MethodsItems.isLootable = false;
+//        testPackingBlocked("may not loot");
+//    }
+
+    @Test
+    void testStealingNotAllowed() {
+        MethodsItems.isStealing = true;
+        testPackingBlocked("steal");
+    }
 
     // actuallyTake - Not tested directly.
     // TODO

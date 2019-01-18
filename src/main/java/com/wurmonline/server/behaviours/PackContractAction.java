@@ -85,13 +85,11 @@ public class PackContractAction implements ModAction, BehaviourProvider, ActionP
             return TakeResultEnum.TARGET_IN_USE;
         } else {
             long ownId = target.getOwnerId();
-            if (ownId != -10L) {
+            if (ownId != -10L && ownId != performer.getWurmId()) {
+                // TODO - Owned by someone else.
                 return TakeResultEnum.TARGET_HAS_NO_OWNER;
             }
 
-            if (ownId == performer.getWurmId()) {
-                return TakeResultEnum.PERFORMER_IS_OWNER;
-            }
             if (target.isCoin()) {
                 // TODO - Replace with no coins allowed.
                 return TakeResultEnum.INVENTORY_FULL;
@@ -162,15 +160,15 @@ public class PackContractAction implements ModAction, BehaviourProvider, ActionP
 
                     boolean mayUseVehicle = true;
 
-                    Item stealing;
+                    Item topParent;
                     try {
-                        stealing = Items.getItem(toppar);
-                        if (stealing.isDraggable()) {
-                            mayUseVehicle = MethodsItems.mayUseInventoryOfVehicle(performer, stealing);
+                        topParent = Items.getItem(toppar);
+                        if (topParent.isDraggable()) {
+                            mayUseVehicle = MethodsItems.mayUseInventoryOfVehicle(performer, topParent);
                         }
 
-                        if (!mayUseVehicle && target.lastOwner != performer.getWurmId() && (stealing.isVehicle() && stealing.getLockId() != -10L || Items.isItemDragged(stealing)) && performer.getDraggedItem() != stealing) {
-                            TakeResultEnum.VEHICLE_IS_WATCHED.setIndexText(performer.getWurmId(), stealing.getName());
+                        if (!mayUseVehicle && target.lastOwner != performer.getWurmId() && (topParent.isVehicle() && topParent.getLockId() != -10L || Items.isItemDragged(topParent)) && performer.getDraggedItem() != topParent) {
+                            TakeResultEnum.VEHICLE_IS_WATCHED.setIndexText(performer.getWurmId(), topParent.getName());
                             return TakeResultEnum.VEHICLE_IS_WATCHED;
                         }
                     } catch (NoSuchItemException ignored) {}
@@ -288,6 +286,7 @@ public class PackContractAction implements ModAction, BehaviourProvider, ActionP
                             return true;
                         }
 
+                        // TODO - No Partial packing?
                         for (Item item : toPack) {
                             TakeResultEnum result = checkTake(performer, item);
                             if (result != TakeResultEnum.SUCCESS) {

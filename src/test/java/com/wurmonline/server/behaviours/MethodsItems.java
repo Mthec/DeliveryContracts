@@ -14,4 +14,9 @@ public class MethodsItems {
     public static boolean isLootableBy(Creature creature, Item item) {
         return isLootable;
     }
+
+    public static void reset() {
+        isStealing = false;
+        isLootable = true;
+    }
 }

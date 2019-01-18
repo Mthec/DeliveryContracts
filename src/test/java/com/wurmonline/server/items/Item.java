@@ -31,9 +31,13 @@ public class Item {
     public boolean mailed;
     private long bridgeId = -10;
 
+    // For modification during testing.
     public boolean busy;
     public boolean noTake;
     public boolean draggable;
+    public boolean coin;
+    public boolean liquid;
+    public boolean banked;
 
     public Item(int templateId) {
         this.templateId = templateId;
@@ -199,11 +203,11 @@ public class Item {
     }
 
     public boolean isCoin() {
-        return false;
+        return coin;
     }
 
     public boolean isLiquid() {
-        return false;
+        return liquid;
     }
 
     public boolean isFullprice() {
@@ -211,21 +215,22 @@ public class Item {
     }
 
     public boolean isMailed() {
-        return false;
+        return mailed;
     }
 
     public boolean isBanked() {
-        return false;
+        return banked;
     }
 
     public boolean isBulkItem() {
-        return false;
+        return templateId == ItemList.bulkItem;
     }
 
     public boolean isBulkContainer() {
-        return false;
+        return templateId == ItemList.bulkContainer;
     }
 
+    // TODO - Check item count instead?
     public int getBulkNums() {
         return 0;
     }
@@ -302,5 +307,9 @@ public class Item {
 
     public void setLastMaintained(long time) {
 
+    }
+
+    public boolean isEmpty(boolean b) {
+        return getItemCount() == 0;
     }
 }
