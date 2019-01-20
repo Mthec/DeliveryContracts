@@ -56,6 +56,7 @@ public class DeliverAction implements ModAction, BehaviourProvider, ActionPerfor
             if (target.getTemplateId() == ItemList.villageToken && target.getData2() != performer.getVillageId()) {
                 performer.getCommunicator().sendNormalServerMessage("The spirits will not deliver to a village you aren't a citizen of.");
                 return false;
+                // TODO - Illegal to drop.
             }
             try {
                 Item source = Items.getItem(action.getSubjectId());

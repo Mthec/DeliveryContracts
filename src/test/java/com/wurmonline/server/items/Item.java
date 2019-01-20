@@ -4,10 +4,9 @@ import com.wurmonline.math.TilePos;
 import com.wurmonline.server.Items;
 import com.wurmonline.server.creatures.Creature;
 import com.wurmonline.server.creatures.NoSuchCreatureException;
+import mod.wurmunlimited.delivery.DeliveryContractsMod;
 
-import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 public class Item {
@@ -17,7 +16,6 @@ public class Item {
     private long id;
     private Creature inFrontOf;
     private Set<Item> items = new HashSet<>();
-    private List<Item> sortedItems = new ArrayList<>();
     private String name = "";
     private String description = "";
     private float ql = 1.0f;
@@ -30,6 +28,7 @@ public class Item {
     private Set<Creature> watchers;
     public boolean mailed;
     private long bridgeId = -10;
+    public TradingWindow tradeWindow;
 
     // For modification during testing.
     public boolean busy;
@@ -41,6 +40,7 @@ public class Item {
     public boolean sign;
     public boolean streetLamp;
     public boolean flag;
+    public boolean hollow;
 
     public Item(int templateId) {
         this.templateId = templateId;
@@ -135,21 +135,28 @@ public class Item {
             item.parent.removeItem(item);
         item.parent = this;
         item.ownerId = ownerId;
-        items.add(item);
-        return sortedItems.add(item);
+        return items.add(item);
     }
 
     private void removeItem(Item item) {
         items.remove(item);
-        sortedItems.remove(item);
     }
 
     public Set<Item> getItems() {
         return items;
     }
 
+    // TODO - Does this need blocking as well?
     public Item[] getItemsAsArray() {
-        return sortedItems.toArray(new Item[0]);
+//        if (templateId == DeliveryContractsMod.getTemplateId())
+//            return new Item[0];
+        return items.toArray(new Item[0]);
+    }
+
+    public Item[] getAllItems(boolean b) {
+        if (templateId == DeliveryContractsMod.getTemplateId())
+            return new Item[0];
+        return getItemsAsArray();
     }
 
     public int getItemCount() {
@@ -220,7 +227,7 @@ public class Item {
     }
 
     public boolean isFullprice() {
-        return false;
+        return isCoin();
     }
 
     public boolean isMailed() {
@@ -331,11 +338,85 @@ public class Item {
     }
 
     public boolean isEmpty(boolean b) {
+        if (templateId == DeliveryContractsMod.getTemplateId())
+            return true;
         return getItemCount() == 0;
     }
 
     public void clear() {
         items.clear();
-        sortedItems.clear();
+    }
+
+    public boolean contains(Item item) {
+        return items.contains(item);
+    }
+
+    public boolean isHollow() {
+        return hollow;
+    }
+
+    public TradingWindow getTradeWindow() {
+        return tradeWindow;
+    }
+
+    public void setTradeWindow(TradingWindow window) {
+        tradeWindow = window;
+    }
+
+    public boolean isViewableBy(Creature creature) {
+        return true;
+    }
+
+    public boolean isArtifact() {
+        return false;
+    }
+
+    public boolean isRoyal() {
+        return false;
+    }
+
+    public boolean isVillageDeed() {
+        return templateId == ItemList.settlementDeed;
+    }
+
+    public boolean isHomesteadDeed() {
+        return false;
+    }
+
+    public boolean isLockable() {
+        return false;
+    }
+
+    public boolean isSealedByPlayer() {
+        return false;
+    }
+
+    public Item dropItem(long itemId, boolean b) {
+        Item item = null;
+
+        for (Item i : items) {
+            if (i.getWurmId() == itemId) {
+                item = i;
+                break;
+            }
+        }
+
+        return item;
+    }
+
+    public byte getMaterial() {
+        return 0;
+    }
+
+    public boolean isPurchased() {
+        return false;
+    }
+
+    public int getPrice() {
+        return 1;
+    }
+
+    public int getValue() {
+        return 1;
     }
 }

@@ -16,4 +16,8 @@ public class Zone {
     public void removeItem(Item item) {
         items.remove(item);
     }
+
+    public void addItem(Item item) {
+        items.add(item);
+    }
 }

@@ -1,6 +1,8 @@
 package com.wurmonline.server.creatures;
 
 
+import com.wurmonline.server.items.Item;
+
 public class Communicator {
     private String lastMessage = "";
 
@@ -17,4 +19,11 @@ public class Communicator {
     public String getLastMessage() {
         return lastMessage;
     }
+
+    public void sendStartTrading(Creature creature) {}
+    public void sendAddToInventory(Item item, long l1, long l2, int i1) {}
+    public void sendRemoveFromInventory(Item item, long l1) {}
+    public void sendTradeAgree(Creature creature, boolean b) {}
+    public void sendCloseTradeWindow() {}
+    public void sendTradeChanged(int i) {}
 }

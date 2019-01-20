@@ -1,8 +1,11 @@
 package com.wurmonline.server.behaviours;
 
+import com.wurmonline.server.Items;
 import com.wurmonline.server.items.Item;
 import com.wurmonline.server.items.ItemList;
 import com.wurmonline.server.structures.Blocking;
+import com.wurmonline.server.zones.Zone;
+import com.wurmonline.server.zones.Zones;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -309,6 +312,14 @@ class PackContractActionTests extends ActionBehaviourTest {
     }
 
     @Test
+    void testNotBlockPackingItemInInventoryWhenInAnotherVillage() {
+        creature.getInventory().insertItem(itemToPack);
+        village.getRoleFor(creature).setMayPickup(false);
+
+        testPackingNotBlocked();
+    }
+
+    @Test
     void testBlockIfDoesNotHaveVillagePermissionToPickupPlanted() {
         village.getRoleFor(creature).setMayPickup(false);
         village.getRoleFor(creature).setMayPickupPlanted(false);
@@ -382,5 +393,24 @@ class PackContractActionTests extends ActionBehaviourTest {
     }
 
     // actuallyTake - Not tested directly.
-    // TODO
+
+    @Test
+    void testItemsRemovedFromZone() {
+        Zone zone = Zones.getZone((int)itemToPack.getPosX() >> 2, (int)itemToPack.getPosY() >> 2, true);
+        zone.addItem(itemToPack);
+
+        mod.action(action, creature, pile, mod.getActionId(), 0);
+
+        assertFalse(zone.items.contains(itemToPack));
+    }
+
+    @Test
+    void testDraggingStopped() {
+        itemToPack.setTemplateId(ItemList.cartLarge);
+        Items.startDragging(creature, itemToPack);
+
+        mod.action(action, creature, pile, mod.getActionId(), 0);
+
+        assertNull(creature.getDraggedItem());
+    }
 }

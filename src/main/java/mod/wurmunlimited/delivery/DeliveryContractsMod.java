@@ -25,7 +25,10 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -39,14 +42,15 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
     private boolean contractsOnTraders = true;
     private static Map<Creature, Integer> weightBlocker = new HashMap<>();
 
+    // TODO - Items not showing in inventory on server reload.
+
     public static void addWeightToBlock(Creature creature, int weight) {
         weightBlocker.put(creature, weight);
     }
 
     @Override
     public void configure(Properties properties) {
-        // TODO - Price not working correctly.
-        // TODO - Changing prices on traders.
+        // TODO - Changing prices on traders.  isFullPrice needed for Trader, but then how to adjust for merchants?
         String val = properties.getProperty("contract_price_in_irons");
         if (val != null && val.length() > 0) {
             try {
@@ -90,7 +94,8 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
                                     ItemTypes.ITEM_TYPE_HASDATA,
                                     ItemTypes.ITEM_TYPE_LOADED,
                                     ItemTypes.ITEM_TYPE_NOT_MISSION,
-                                    ItemTypes.ITEM_TYPE_HOLLOW
+                                    ItemTypes.ITEM_TYPE_HOLLOW,
+                                    ItemTypes.ITEM_TYPE_HOLLOW_VIEWABLE // TODO - Any side-effects?
                             })
                             .value(contractPrice)
                             .difficulty(100.0F)
@@ -143,11 +148,11 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
     public void init() {
         HookManager manager = HookManager.getInstance();
 
-        // Destroy items contained in delivery contract when the contract is destroyed.
-        manager.registerHook("com.wurmonline.server.Items",
-                "destroyItem",
-                "(JZZ)V",
-                () -> this::destroyItem);
+//        // Destroy items contained in delivery contract when the contract is destroyed.
+//        manager.registerHook("com.wurmonline.server.Items",
+//                "destroyItem",
+//                "(JZZ)V",
+//                () -> this::destroyItem);
 
         // Add delivery contracts to traders default inventory.
         manager.registerHook("com.wurmonline.server.economy.Shop",
@@ -162,10 +167,10 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
                 "()V",
                 () -> this::swapOwners);
 
-        manager.registerHook("com.wurmonline.server.items.Item",
-                "getFullWeight",
-                "(Z)I",
-                () -> this::getFullWeight);
+//        manager.registerHook("com.wurmonline.server.items.Item",
+//                "getFullWeight",
+//                "(Z)I",
+//                () -> this::getFullWeight);
 
         manager.registerHook("com.wurmonline.server.items.Item",
                 "isEmpty",
@@ -202,6 +207,40 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
                 "setOwnerStuff",
                 "(Lcom/wurmonline/server/items/ItemTemplate;)V",
                 () -> this::setOwner);
+
+        // To prevent extracting items from contract.
+        manager.registerHook("com.wurmonline.server.items.Item",
+                "moveToItem",
+                "(Lcom/wurmonline/server/creatures/Creature;JZ)Z",
+                () -> this::moveToItem);
+
+        manager.registerHook("com.wurmonline.server.items.TradingWindow",
+                "mayAddFromInventory",
+                "(Lcom/wurmonline/server/creatures/Creature;Lcom/wurmonline/server/items/Item;)Z",
+                () -> this::mayAddToInventory);
+
+        // TODO - Optional Buyer Merchant compatibility.  Don't forget this probably the mod needs loading before Buyer Merchant.
+//        manager.registerHook("com.wurmonline.server.items.BuyerTradingWindow",
+//                "mayAddFromInventory",
+//                "(Lcom/wurmonline/server/creatures/Creature;Lcom/wurmonline/server/items/Item;)Z",
+//                () -> this::mayAddToInventory);
+    }
+
+    private boolean isInContract(Item item) {
+        Item parent = item.getParentOrNull();
+        return parent != null && parent.getTemplateId() == templateId;
+    }
+
+    private Object mayAddToInventory(Object o, Method method, Object[] args) throws InvocationTargetException, IllegalAccessException {
+        if (isInContract((Item)args[1]))
+            return false;
+        return method.invoke(o, args);
+    }
+
+    private Object moveToItem(Object o, Method method, Object[] args) throws InvocationTargetException, IllegalAccessException {
+        if (isInContract((Item)o))
+            return false;
+        return method.invoke(o, args);
     }
 
     // TODO - moveToItem sendNormalServerMessage("You cannot reach that now.");  Not sure if it will always work.  Test.
@@ -252,30 +291,30 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
     }
 
     private Object getItemsAsArray(Object o, Method method, Object[] args) throws InvocationTargetException, IllegalAccessException {
-        if (((Item)o).getTemplateId() == templateId)
+        if (((Item)o).getTemplateId() == templateId && ((Item)o).isTraded())
             return new Item[0];
         return method.invoke(o, args);
     }
 
     private Object isEmpty(Object o, Method method, Object[] args) throws InvocationTargetException, IllegalAccessException {
-        if (((Item)o).getTemplateId() == templateId)
+        if (((Item)o).getTemplateId() == templateId && ((Item)o).isTraded())
             return true;
         return method.invoke(o, args);
     }
 
-    // TODO - Needed any more as it's all inside the contract?
-    Object destroyItem(Object o, Method method, Object[] args) throws InvocationTargetException, IllegalAccessException {
-        Optional<Item> maybeContract = Items.getItemOptional((long)args[0]);
-        if (maybeContract.isPresent()) {
-            Item contract = maybeContract.get();
-            if (contract.getTemplateId() == templateId) {
-                long itemId = contract.getData();
-                if (itemId != -1L)
-                    Items.destroyItem(itemId);
-            }
-        }
-        return method.invoke(o, args);
-    }
+//    // TODO - Needed any more as it's all inside the contract?
+//    Object destroyItem(Object o, Method method, Object[] args) throws InvocationTargetException, IllegalAccessException {
+//        Optional<Item> maybeContract = Items.getItemOptional((long)args[0]);
+//        if (maybeContract.isPresent()) {
+//            Item contract = maybeContract.get();
+//            if (contract.getTemplateId() == templateId) {
+//                long itemId = contract.getData();
+//                if (itemId != -1L)
+//                    Items.destroyItem(itemId);
+//            }
+//        }
+//        return method.invoke(o, args);
+//    }
 
     Object createShop(Object o, Method method, Object[] args) throws Exception {
         if (contractsOnTraders) {
@@ -314,11 +353,11 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
         return null;
     }
 
-    // TODO - Check and Test.  Needed?
-    Object getFullWeight(Object o, Method method, Object[] args) throws InvocationTargetException, IllegalAccessException {
-        if (((Item)o).getTemplateId() == templateId) {
-            return 0;
-        }
-        return method.invoke(o, args);
-    }
+//    // TODO - Check and Test.  Needed?
+//    Object getFullWeight(Object o, Method method, Object[] args) throws InvocationTargetException, IllegalAccessException {
+//        if (((Item)o).getTemplateId() == templateId) {
+//            return 0;
+//        }
+//        return method.invoke(o, args);
+//    }
 }

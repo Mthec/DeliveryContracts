@@ -10,6 +10,7 @@ public class Items {
 
     private static Map<Long, Item> items = new HashMap<>();
     private static Set<Item> destroyedItems = new HashSet<>();
+    private static Map<Item, Creature> draggedItems = new HashMap<>();
 
     public static void reset() {
         items = new HashMap<>();
@@ -49,5 +50,18 @@ public class Items {
 
     public static boolean wasDestroyed(Item item) {
         return destroyedItems.contains(item);
+    }
+
+    public static void startDragging(Creature creature, Item item) {
+        draggedItems.put(item, creature);
+        creature.setDraggedItem(item);
+    }
+
+    public static void stopDragging(Item dragged) {
+        Creature creature = draggedItems.get(dragged);
+        if (creature != null) {
+            draggedItems.remove(dragged);
+            creature.setDraggedItem(null);
+        }
     }
 }

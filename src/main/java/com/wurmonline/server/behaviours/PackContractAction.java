@@ -138,12 +138,14 @@ public class PackContractAction implements ModAction, BehaviourProvider, ActionP
                         }
                     }
 
-                    Village village = Zones.getVillage(target.getTilePos(), target.isOnSurface());
-                    if (village != null) {
-                        VillageRole roles = village.getRoleFor(performer);
-                        if (roles != null) {
-                            if ((target.isPlanted() && !roles.mayPickupPlanted()) || !roles.mayPickup())
-                                return PackResult.INSUFFICIENT_VILLAGE_PERMISSIONS();
+                    if (ownId != performer.getWurmId()) {
+                        Village village = Zones.getVillage(target.getTilePos(), target.isOnSurface());
+                        if (village != null) {
+                            VillageRole roles = village.getRoleFor(performer);
+                            if (roles != null) {
+                                if ((target.isPlanted() && !roles.mayPickupPlanted()) || !roles.mayPickup())
+                                    return PackResult.INSUFFICIENT_VILLAGE_PERMISSIONS();
+                            }
                         }
                     }
 
@@ -178,6 +180,7 @@ public class PackContractAction implements ModAction, BehaviourProvider, ActionP
         }
         return PackResult.UNKNOWN_FAILURE();
     }
+
     private void actuallyTake(Creature performer, Item target, Item contract) throws Exception {
         if (target.getTopParent() == target.getWurmId()) {
             try {
@@ -206,10 +209,6 @@ public class PackContractAction implements ModAction, BehaviourProvider, ActionP
                 target.hatching = false;
                 target.setRarity((byte)0);
             }
-        }
-
-        if (target == performer.getDraggedItem()) {
-            performer.setDraggedItem(null);
         }
 
         if (target.getTemplate().isContainerWithSubItems()) {
@@ -253,8 +252,9 @@ public class PackContractAction implements ModAction, BehaviourProvider, ActionP
                         // TODO - Confirmation?
                         Item parent = target.getParentOrNull();
                         List<Item> items = new ArrayList<>();
+                        // TODO - Stream instead?
                         if (parent != null) {
-                            for (Item item : parent.getItemsAsArray()) {
+                            for (Item item : parent.getItems()) {
                                 if (item.getName().equals(target.getName())) {
                                     items.add(item);
                                 }
