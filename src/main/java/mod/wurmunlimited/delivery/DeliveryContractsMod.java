@@ -16,6 +16,7 @@ import com.wurmonline.server.economy.Shop;
 import com.wurmonline.server.items.*;
 import com.wurmonline.shared.constants.IconConstants;
 import com.wurmonline.shared.constants.ItemMaterials;
+import javassist.NotFoundException;
 import org.gotti.wurmunlimited.modloader.classhooks.HookManager;
 import org.gotti.wurmunlimited.modloader.interfaces.*;
 import org.gotti.wurmunlimited.modsupport.ItemTemplateBuilder;
@@ -26,8 +27,8 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -42,15 +43,12 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
     private boolean contractsOnTraders = true;
     private static Map<Creature, Integer> weightBlocker = new HashMap<>();
 
-    // TODO - Items not showing in inventory on server reload.
-
     public static void addWeightToBlock(Creature creature, int weight) {
         weightBlocker.put(creature, weight);
     }
 
     @Override
     public void configure(Properties properties) {
-        // TODO - Changing prices on traders.  isFullPrice needed for Trader, but then how to adjust for merchants?
         String val = properties.getProperty("contract_price_in_irons");
         if (val != null && val.length() > 0) {
             try {
@@ -91,16 +89,19 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
                                     ItemTypes.ITEM_TYPE_FULLPRICE,
                                     ItemTypes.ITEM_TYPE_INDESTRUCTIBLE,
                                     ItemTypes.ITEM_TYPE_NODROP,
-                                    ItemTypes.ITEM_TYPE_HASDATA,
                                     ItemTypes.ITEM_TYPE_LOADED,
                                     ItemTypes.ITEM_TYPE_NOT_MISSION,
                                     ItemTypes.ITEM_TYPE_HOLLOW,
-                                    ItemTypes.ITEM_TYPE_HOLLOW_VIEWABLE // TODO - Any side-effects?
+                                    ItemTypes.ITEM_TYPE_HOLLOW_VIEWABLE, // TODO - Any side-effects?
                             })
                             .value(contractPrice)
                             .difficulty(100.0F)
                             .build();
             templateId = template.getTemplateId();
+
+            if (template.isPurchased()) {
+                throw new RuntimeException();
+            }
         }
         catch (IOException e) {
             throw new RuntimeException(e);
@@ -219,11 +220,27 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
                 "(Lcom/wurmonline/server/creatures/Creature;Lcom/wurmonline/server/items/Item;)Z",
                 () -> this::mayAddToInventory);
 
-        // TODO - Optional Buyer Merchant compatibility.  Don't forget this probably the mod needs loading before Buyer Merchant.
-//        manager.registerHook("com.wurmonline.server.items.BuyerTradingWindow",
-//                "mayAddFromInventory",
-//                "(Lcom/wurmonline/server/creatures/Creature;Lcom/wurmonline/server/items/Item;)Z",
-//                () -> this::mayAddToInventory);
+        manager.registerHook("com.wurmonline.server.items.Item",
+                "isFullprice",
+                "()Z",
+                () -> this::isFullPrice);
+
+        try {
+            manager.getClassPool().getCtClass("com.wurmonline.server.items.BuyerTradingWindow");
+            manager.registerHook("com.wurmonline.server.items.BuyerTradingWindow",
+                    "mayAddFromInventory",
+                    "(Lcom/wurmonline/server/creatures/Creature;Lcom/wurmonline/server/items/Item;)Z",
+                    () -> this::mayAddToInventory);
+            logger.info("Added hook to Buyer Merchant successfully.");
+        } catch (NotFoundException ignored) {}
+    }
+
+    private Object isFullPrice(Object o, Method method, Object[] args) throws InvocationTargetException, IllegalAccessException {
+        Item item = (Item)o;
+        if (item.getTemplateId() == templateId && item.getItemCount() > 0)
+            return false;
+
+        return method.invoke(o, args);
     }
 
     private boolean isInContract(Item item) {
@@ -242,8 +259,6 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
             return false;
         return method.invoke(o, args);
     }
-
-    // TODO - moveToItem sendNormalServerMessage("You cannot reach that now.");  Not sure if it will always work.  Test.
 
     private Object setOwner(Object o, Method method, Object[] args) throws InvocationTargetException, IllegalAccessException {
         Item item = (Item)o;
@@ -302,20 +317,6 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
         return method.invoke(o, args);
     }
 
-//    // TODO - Needed any more as it's all inside the contract?
-//    Object destroyItem(Object o, Method method, Object[] args) throws InvocationTargetException, IllegalAccessException {
-//        Optional<Item> maybeContract = Items.getItemOptional((long)args[0]);
-//        if (maybeContract.isPresent()) {
-//            Item contract = maybeContract.get();
-//            if (contract.getTemplateId() == templateId) {
-//                long itemId = contract.getData();
-//                if (itemId != -1L)
-//                    Items.destroyItem(itemId);
-//            }
-//        }
-//        return method.invoke(o, args);
-//    }
-
     Object createShop(Object o, Method method, Object[] args) throws Exception {
         if (contractsOnTraders) {
             Creature toReturn = (Creature)args[0];
@@ -327,37 +328,32 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
         return method.invoke(o, args);
     }
 
-    // TODO - Test?  Already tested in Buyer Merchant, might extract into separate project and link to both.
     Object swapOwners(Object o, Method method, Object[] args) throws InvocationTargetException, IllegalAccessException {
-        List<Item> contracts = Stream.of(((TradingWindow) o).getItems()).filter(item -> item.getTemplateId() == templateId).collect(Collectors.toList());
-        contracts.forEach(item -> item.setTemplateId(ItemList.merchantContract));
+        if (((TradingWindow)o).getWurmId() != 3)
+            return method.invoke(o, args);
+
+        Optional<Item> maybeContract = Stream.of(((TradingWindow) o).getItems()).filter(item -> item.getTemplateId() == templateId).findAny();
+        if (!maybeContract.isPresent())
+            return method.invoke(o, args);
+
+        Item contract = maybeContract.get();
+        contract.setTemplateId(ItemList.merchantContract);
 
         try {
             method.invoke(o, args);
 
-            if (contracts.size() > 0) {
-                Field windowOwner = TradingWindow.class.getDeclaredField("windowowner");
-                windowOwner.setAccessible(true);
-                Creature trader = (Creature)windowOwner.get(o);
-                if (trader.isNpcTrader() && !trader.getShop().isPersonal()) {
-                    Item contract = contracts.get(0);
-                    Item newItem = ItemFactory.createItem(templateId, contract.getQualityLevel(), contract.getTemplate().getMaterial(), (byte)0, null);
-                    trader.getInventory().insertItem(newItem);
-                }
+            Field windowOwner = TradingWindow.class.getDeclaredField("windowowner");
+            windowOwner.setAccessible(true);
+            Creature trader = (Creature)windowOwner.get(o);
+            if (trader.isNpcTrader() && !trader.getShop().isPersonal()) {
+                Item newItem = ItemFactory.createItem(templateId, contract.getQualityLevel(), contract.getTemplate().getMaterial(), (byte)0, null);
+                trader.getInventory().insertItem(newItem);
             }
         } catch (NoSuchTemplateException | FailedException | NoSuchFieldException e) {
             logger.log(Level.WARNING, e.getMessage(), e);
         } finally {
-            contracts.forEach(item -> item.setTemplateId(templateId));
+            contract.setTemplateId(templateId);
         }
         return null;
     }
-
-//    // TODO - Check and Test.  Needed?
-//    Object getFullWeight(Object o, Method method, Object[] args) throws InvocationTargetException, IllegalAccessException {
-//        if (((Item)o).getTemplateId() == templateId) {
-//            return 0;
-//        }
-//        return method.invoke(o, args);
-//    }
 }

@@ -6,7 +6,6 @@ import com.wurmonline.server.economy.Economy;
 import com.wurmonline.server.items.Item;
 import com.wurmonline.server.items.ItemList;
 import com.wurmonline.server.structures.Blocking;
-import com.wurmonline.server.villages.Village;
 import com.wurmonline.server.zones.VolaTile;
 import com.wurmonline.server.zones.Zones;
 import mod.wurmunlimited.delivery.DeliveryContractsMod;
@@ -16,7 +15,6 @@ import java.lang.reflect.Field;
 
 public class ActionBehaviourTest {
     protected Creature creature;
-     Village village;
     int contractTemplateId = 12345;
     protected Item contract;
     protected Item itemToPack;
@@ -39,8 +37,6 @@ public class ActionBehaviourTest {
         Economy.reset();
 
         creature = new Creature();
-        village = new Village();
-        creature.setVillageId(village.getId());
         creature.currentTile = new VolaTile(0);
         contract = new Item(contractTemplateId);
         contract.hollow = true;

@@ -6,11 +6,13 @@ import com.wurmonline.server.zones.Zones;
 public class Village {
     private static int nextVillageId = 100;
     private int id;
-    private VillageRole villageRole;
+    private VillageRole citizenRole;
+    private VillageRole visitorRole;
 
     public Village() {
         id = nextVillageId++;
-        villageRole = new VillageRole();
+        citizenRole = new VillageRole(true);
+        visitorRole = new VillageRole();
         Zones.setVillage(this);
     }
 
@@ -19,6 +21,8 @@ public class Village {
     }
 
     public VillageRole getRoleFor(Creature creature) {
-        return villageRole;
+        if (creature.getVillageId() == id)
+            return citizenRole;
+        return visitorRole;
     }
 }

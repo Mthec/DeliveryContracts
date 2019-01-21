@@ -30,12 +30,7 @@ public class PackResult {
     }
 
     public static PackResult NEEDS_TO_STEAL(String itemName) {
-        return new PackResult(false, "You have to steal the %s.", itemName);
-    }
-
-    // TODO - Change message.
-    public static PackResult MAY_NOT_STEAL() {
-        return new PackResult(false, "You need more body control to steal things.");
+        return new PackResult(false, "You would have to steal the %s.", itemName);
     }
 
     public static PackResult TOO_FAR_AWAY(String itemName) {
@@ -56,7 +51,7 @@ public class PackResult {
 
     // TODO - Allow later?
     public static PackResult TARGET_BULK_ITEM() {
-        return new PackResult(false, "You have to use drag and drop instead.");
+        return new PackResult(false, "You cannot pack bulk items.");
     }
 
     public static PackResult TARGET_IN_USE(String itemName) {
@@ -76,12 +71,11 @@ public class PackResult {
     }
 
     public static PackResult YOU_CANNOT_FIT() {
-        return new PackResult(false, "You cannot pack yourself in a contract.");
+        return new PackResult(false, "You cannot pack yourself into a contract.");
     }
 
-    // TODO - Eliminate.
     public static PackResult UNKNOWN_FAILURE() {
-        return new PackResult(false, "Something went wrong");
+        return new PackResult(false, "Something went wrong on the server.");
     }
     private final boolean success;
 
@@ -97,8 +91,8 @@ public class PackResult {
         this.message = String.format(message, arguments);
     }
 
-    public boolean wasNotSuccessful() {
-        return !success;
+    public boolean wasSuccessful() {
+        return success;
     }
 
     public void sendToPerformer(Creature performer) {

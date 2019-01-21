@@ -53,14 +53,14 @@ public class PackContractAction implements ModAction, BehaviourProvider, ActionP
     @Override
     public List<ActionEntry> getBehavioursFor(Creature performer, Item subject, Item target) {
         if (subject != null && target != null) {
-            if (subject.getTemplateId() == DeliveryContractsMod.getTemplateId() && subject.getItemCount() == 0 && !checkTake(performer, target).wasNotSuccessful()) {
+            if (subject.getTemplateId() == DeliveryContractsMod.getTemplateId() && subject.getItemCount() == 0 && checkTake(performer, target).wasSuccessful()) {
                 return Collections.singletonList(actionEntry);
             }
         }
         return null;
     }
 
-    PackResult checkTake(Creature performer, Item target) {
+    private PackResult checkTake(Creature performer, Item target) {
         if (target.isBeingWorkedOn()) {
             return PackResult.TARGET_IN_USE(target.getName());
         } else {
@@ -77,7 +77,6 @@ public class PackContractAction implements ModAction, BehaviourProvider, ActionP
                 return PackResult.YOU_CANNOT_FIT();
             }
 
-            // TODO - Is this the best place for inventory check?
             if (target.isMailed() || target.isBanked() || target.isInventory()) {
                 return PackResult.TARGET_IS_UNREACHABLE();
             }
@@ -98,7 +97,6 @@ public class PackContractAction implements ModAction, BehaviourProvider, ActionP
                 return PackResult.TARGET_CANNOT_BE_DROPPED(target.getName());
             }
 
-            // TODO - What about hitched carts?
             if (target.isTent()) {
                 Vehicle vehicle = Vehicles.getVehicle(target);
                 if (vehicle != null && vehicle.getDraggers() != null && vehicle.getDraggers().size() > 0) {
@@ -124,8 +122,8 @@ public class PackContractAction implements ModAction, BehaviourProvider, ActionP
                         return PackResult.TOO_FAR_AWAY(target.getName());
                     }
 
-                    Zone tzone = Zones.getZone((int)target.getPosX() >> 2, (int)target.getPosY() >> 2, target.isOnSurface());
-                    VolaTile tile = tzone.getTileOrNull((int)target.getPosX() >> 2, (int)target.getPosY() >> 2);
+                    Zone zone = Zones.getZone((int)target.getPosX() >> 2, (int)target.getPosY() >> 2, target.isOnSurface());
+                    VolaTile tile = zone.getTileOrNull((int)target.getPosX() >> 2, (int)target.getPosY() >> 2);
                     if (tile != null) {
                         Structure struct = tile.getStructure();
                         VolaTile tile2 = performer.getCurrentTile();
@@ -149,7 +147,7 @@ public class PackContractAction implements ModAction, BehaviourProvider, ActionP
                         }
                     }
 
-                    long toppar = target.getTopParent();
+                    long topParentId = target.getTopParent();
                     if (!MethodsItems.isLootableBy(performer, target)) {
                         return PackResult.MAY_NOT_LOOT_THAT_ITEM();
                     }
@@ -158,7 +156,7 @@ public class PackContractAction implements ModAction, BehaviourProvider, ActionP
 
                     Item topParent;
                     try {
-                        topParent = Items.getItem(toppar);
+                        topParent = Items.getItem(topParentId);
                         if (topParent.isDraggable()) {
                             mayUseVehicle = MethodsItems.mayUseInventoryOfVehicle(performer, topParent);
                         }
@@ -181,7 +179,7 @@ public class PackContractAction implements ModAction, BehaviourProvider, ActionP
         return PackResult.UNKNOWN_FAILURE();
     }
 
-    private void actuallyTake(Creature performer, Item target, Item contract) throws Exception {
+    private void actuallyTake(Creature performer, Item target, Item contract) throws NoSuchItemException, NoSuchZoneException {
         if (target.getTopParent() == target.getWurmId()) {
             try {
                 for (Creature watcher : target.getWatchers()) {
@@ -247,12 +245,10 @@ public class PackContractAction implements ModAction, BehaviourProvider, ActionP
                     } else if (target.getTemplateId() == ItemList.itemPile) {
                         toPack = target.getItemsAsArray();
                     } else {
-                        // TODO - Is inventory order guaranteed?  Might just pack all of type?
                         // TODO - Can't be type, maybe name?  Is the inventory always grouped by name?
                         // TODO - Confirmation?
                         Item parent = target.getParentOrNull();
                         List<Item> items = new ArrayList<>();
-                        // TODO - Stream instead?
                         if (parent != null) {
                             for (Item item : parent.getItems()) {
                                 if (item.getName().equals(target.getName())) {
@@ -271,7 +267,7 @@ public class PackContractAction implements ModAction, BehaviourProvider, ActionP
 
                         for (Item item : toPack) {
                             PackResult result = checkTake(performer, item);
-                            if (result.wasNotSuccessful()) {
+                            if (!result.wasSuccessful()) {
                                 result.sendToPerformer(performer);
                                 return true;
                             }
@@ -288,7 +284,7 @@ public class PackContractAction implements ModAction, BehaviourProvider, ActionP
 
                             try {
                                 actuallyTake(performer, item, source);
-                            } catch (Exception e) {
+                            } catch (NoSuchItemException | NoSuchZoneException e) {
                                 // TODO - Set error boolean?
                                 e.printStackTrace();
                             }

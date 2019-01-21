@@ -1,5 +1,6 @@
 package com.wurmonline.server.creatures;
 
+import com.wurmonline.math.TilePos;
 import com.wurmonline.server.items.Item;
 import com.wurmonline.server.items.ItemList;
 import com.wurmonline.server.items.Trade;
@@ -23,6 +24,9 @@ public class Creature {
     private Trade trade;
     public boolean player = true;
     private TradeHandler tradeHandler;
+    public boolean onSurface;
+    public boolean withinDistance = true;
+    public long vehicle;
 
     public Creature() {
         id = nextWurmId++;
@@ -74,11 +78,15 @@ public class Creature {
     }
 
     public boolean isWithinDistanceTo(float x, float y, float z, float maxDistance) {
-        return true;
+        return withinDistance;
     }
 
     public VolaTile getCurrentTile() {
         return currentTile;
+    }
+
+    public long getVehicle() {
+        return vehicle;
     }
 
     public Item getDraggedItem() {
@@ -145,5 +153,13 @@ public class Creature {
 
     public Logger getLogger() {
         return Logger.getLogger(Creature.class.getName());
+    }
+
+    public TilePos getTilePos() {
+        return null;
+    }
+
+    public boolean isOnSurface() {
+        return onSurface;
     }
 }

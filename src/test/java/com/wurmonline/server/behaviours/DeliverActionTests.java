@@ -3,6 +3,7 @@ package com.wurmonline.server.behaviours;
 import com.wurmonline.server.Items;
 import com.wurmonline.server.items.Item;
 import com.wurmonline.server.items.ItemList;
+import com.wurmonline.server.villages.Village;
 import com.wurmonline.server.zones.VolaTile;
 import org.junit.jupiter.api.Test;
 
@@ -96,17 +97,19 @@ class DeliverActionTests extends ActionBehaviourTest {
     @Test
     void testWillNotDeliverToDifferentVillage() {
         contract.insertItem(itemToPack);
-        villageToken.setVillageTokenId(creature.getVillageId() + 1);
+        creature.setVillageId(new Village().getId());
+        new Village();
         mod.action(action, creature, villageToken, mod.getActionId(), 0);
 
         assertFalse(itemToPack.isInFrontOf(creature));
-        assertTrue(creature.getCommunicator().getLastMessage().contains("will not deliver"));
+        assertTrue(creature.getCommunicator().getLastMessage().contains("have permission"));
     }
 
     @Test
     void testWillDeliverToPlayerVillage() {
         contract.insertItem(itemToPack, true);
-        villageToken.setVillageTokenId(creature.getVillageId());
+        Village village = new Village();
+        creature.setVillageId(village.getId());
         itemToPack.setWeight(100);
         creature.setCarry(1);
         mod.action(action, creature, villageToken, mod.getActionId(), 0);

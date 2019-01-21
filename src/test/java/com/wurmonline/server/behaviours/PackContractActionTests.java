@@ -4,6 +4,7 @@ import com.wurmonline.server.Items;
 import com.wurmonline.server.items.Item;
 import com.wurmonline.server.items.ItemList;
 import com.wurmonline.server.structures.Blocking;
+import com.wurmonline.server.villages.Village;
 import com.wurmonline.server.zones.Zone;
 import com.wurmonline.server.zones.Zones;
 import org.junit.jupiter.api.Test;
@@ -45,16 +46,6 @@ class PackContractActionTests extends ActionBehaviourTest {
         contract.setTemplateId(contractTemplateId + 1);
         assertNull(mod.getBehavioursFor(creature, contract, pile));
     }
-
-
-    // TODO
-//    @Test
-//    void testGetBehaviourForWrongItemToPackType() {
-//        assert contract.getItemCount() == 0;
-//        contract.setTemplateId(contractTemplateId + 1);
-//        pile.noTake = true;
-//        assertNull(mod.getBehavioursFor(creature, contract, pile));
-//    }
 
     // action
 
@@ -220,11 +211,19 @@ class PackContractActionTests extends ActionBehaviourTest {
         testPackingBlocked("can't reach");
     }
 
-    // TODO - Should be allowed if in container?
     @Test
     void testLiquidsNotAllowed() {
         itemToPack.liquid = true;
         testPackingBlocked("pour");
+    }
+
+    @Test
+    void testLiquidsInContainersIsAllowed() {
+        itemToPack.hollow = true;
+        Item water = new Item(ItemList.water);
+        water.liquid = true;
+        itemToPack.insertItem(water);
+        testPackingNotBlocked();
     }
 
     @Test
@@ -238,11 +237,10 @@ class PackContractActionTests extends ActionBehaviourTest {
         testPackingBlocked("too heavy");
     }
 
-    // TODO - Better message?
     @Test
     void testBulkItemsNotAllowed() {
         itemToPack.setTemplateId(ItemList.bulkItem);
-        testPackingBlocked("drag and drop");
+        testPackingBlocked("cannot pack");
     }
 
     @Test
@@ -264,12 +262,20 @@ class PackContractActionTests extends ActionBehaviourTest {
         testPackingBlocked("");
     }
 
-    // TODO - Too far away.
-//    @Test
-//    void testBulkItemsNotAllowed() {
-//        itemToPack.setTemplateId(ItemList.bulkItem);
-//        testPackingBlocked("drag and drop");
-//    }
+    @Test
+    void testItemTooFarAway() {
+        creature.withinDistance = false;
+        testPackingBlocked("too far away");
+    }
+
+    @Test
+    void testSameVehicleDoesNotSayItemTooFarAway() {
+        creature.withinDistance = false;
+        Item vehicle = new Item(ItemList.cartLarge);
+        vehicle.insertItem(itemToPack);
+        creature.vehicle = vehicle.getWurmId();
+        testPackingNotBlocked();
+    }
 
     @Test
     void testLootingNotAllowed() {
@@ -277,12 +283,69 @@ class PackContractActionTests extends ActionBehaviourTest {
         testPackingBlocked("may not loot");
     }
 
-    // TODO - Vehicle watched.
-//    @Test
-//    void testLootingNotAllowed() {
-//        MethodsItems.isLootable = false;
-//        testPackingBlocked("may not loot");
-//    }
+    @Test
+    void testWatchedVehicleBlockedIfDraggedByOther() {
+        MethodsItems.mayUseInventory = false;
+        Item vehicle = new Item(ItemList.cartLarge);
+        vehicle.draggable = true;
+        itemToPack.lastOwner = -10;
+        vehicle.insertItem(itemToPack);
+        vehicle.isDragged = true;
+        testPackingBlocked("being watched too closely");
+    }
+
+    @Test
+    void testNotWatchedVehicleHasPermission() {
+        MethodsItems.mayUseInventory = true;
+        Item vehicle = new Item(ItemList.cartLarge);
+        vehicle.draggable = true;
+        vehicle.insertItem(itemToPack);
+        testPackingNotBlocked();
+    }
+
+    @Test
+    void testNotWatchedVehicleTargetLastOwnerIsPacker() {
+        MethodsItems.mayUseInventory = false;
+        Item vehicle = new Item(ItemList.cartLarge);
+        vehicle.draggable = true;
+        vehicle.insertItem(itemToPack);
+        itemToPack.lastOwner = creature.getWurmId();
+        testPackingNotBlocked();
+    }
+
+    @Test
+    void testNotWatchedVehicleIfDragged() {
+        MethodsItems.mayUseInventory = false;
+        Item vehicle = new Item(ItemList.cartLarge);
+        vehicle.draggable = true;
+        vehicle.isDragged = true;
+        creature.setDraggedItem(vehicle);
+        vehicle.insertItem(itemToPack);
+        testPackingNotBlocked();
+    }
+
+    @Test
+    void testWatchedVehicleBlockedIfDraggingOther() {
+        MethodsItems.mayUseInventory = false;
+        Item vehicle = new Item(ItemList.cartLarge);
+        vehicle.draggable = true;
+        vehicle.isDragged = true;
+        vehicle.insertItem(itemToPack);
+        Item otherVehicle = new Item(ItemList.cartLarge);
+        otherVehicle.draggable = true;
+        creature.setDraggedItem(otherVehicle);
+        testPackingBlocked("being watched too closely");
+    }
+
+    @Test
+    void testWatchedVehicleBlockedIfLocked() {
+        MethodsItems.mayUseInventory = false;
+        Item vehicle = new Item(ItemList.cartLarge);
+        vehicle.draggable = true;
+        vehicle.lock = 100;
+        vehicle.insertItem(itemToPack);
+        testPackingBlocked("being watched too closely");
+    }
 
     @Test
     void testStealingNotAllowed() {
@@ -299,20 +362,27 @@ class PackContractActionTests extends ActionBehaviourTest {
         assertTrue(mod.action(action, creature, pile, mod.getActionId(), 0));
     }
 
+    private Village setUpVillage() {
+        return new Village();
+    }
+
     @Test
     void testBlockIfDoesNotHaveVillagePermissionToPickup() {
+        Village village = setUpVillage();
         village.getRoleFor(creature).setMayPickup(false);
         testPackingBlocked("not have permission");
     }
 
     @Test
     void testNotBlockIfDoesHaveVillagePermissionToPickup() {
+        Village village = setUpVillage();
         village.getRoleFor(creature).setMayPickup(true);
         testPackingNotBlocked();
     }
 
     @Test
     void testNotBlockPackingItemInInventoryWhenInAnotherVillage() {
+        Village village = setUpVillage();
         creature.getInventory().insertItem(itemToPack);
         village.getRoleFor(creature).setMayPickup(false);
 
@@ -321,6 +391,7 @@ class PackContractActionTests extends ActionBehaviourTest {
 
     @Test
     void testBlockIfDoesNotHaveVillagePermissionToPickupPlanted() {
+        Village village = setUpVillage();
         village.getRoleFor(creature).setMayPickup(false);
         village.getRoleFor(creature).setMayPickupPlanted(false);
         itemToPack.setPlanted(true);
@@ -330,6 +401,7 @@ class PackContractActionTests extends ActionBehaviourTest {
 
     @Test
     void testNotBlockIfDoesHaveVillagePermissionToPickupPlanted() {
+        Village village = setUpVillage();
         village.getRoleFor(creature).setMayPickupPlanted(true);
         itemToPack.setPlanted(true);
         testPackingNotBlocked();
@@ -353,6 +425,7 @@ class PackContractActionTests extends ActionBehaviourTest {
         assert contract.getItemCount() == 0;
         pile = spy(pile);
         when(pile.getBridgeId()).thenReturn(creature.getBridgeId());
+        Village village = setUpVillage();
         village.getRoleFor(creature).setMayPickup(true);
 
         when(pile.isInventory()).thenReturn(true, false);

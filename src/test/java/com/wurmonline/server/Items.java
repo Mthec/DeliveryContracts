@@ -64,4 +64,8 @@ public class Items {
             creature.setDraggedItem(null);
         }
     }
+
+    public static boolean isItemDragged(Item item) {
+        return item.isDragged;
+    }
 }

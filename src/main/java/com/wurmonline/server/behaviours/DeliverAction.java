@@ -7,7 +7,9 @@ import com.wurmonline.server.creatures.Creature;
 import com.wurmonline.server.creatures.NoSuchCreatureException;
 import com.wurmonline.server.items.Item;
 import com.wurmonline.server.items.ItemList;
+import com.wurmonline.server.villages.Village;
 import com.wurmonline.server.zones.NoSuchZoneException;
+import com.wurmonline.server.zones.Zones;
 import mod.wurmunlimited.delivery.DeliveryContractsMod;
 import org.gotti.wurmunlimited.modsupport.actions.*;
 
@@ -53,11 +55,12 @@ public class DeliverAction implements ModAction, BehaviourProvider, ActionPerfor
     @Override
     public boolean action(Action action, Creature performer, Item target, short num, float counter) {
         if (num == actionId) {
-            if (target.getTemplateId() == ItemList.villageToken && target.getData2() != performer.getVillageId()) {
-                performer.getCommunicator().sendNormalServerMessage("The spirits will not deliver to a village you aren't a citizen of.");
+            Village village = Zones.getVillage(performer.getTilePos(), performer.isOnSurface());
+            if (village != null && !village.getRoleFor(performer).mayDrop()) {
+                performer.getCommunicator().sendNormalServerMessage("You would not have permission to pickup the items after delivery.");
                 return false;
-                // TODO - Illegal to drop.
             }
+
             try {
                 Item source = Items.getItem(action.getSubjectId());
                 if (source.getItemCount() > 0){

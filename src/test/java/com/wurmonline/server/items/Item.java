@@ -22,6 +22,7 @@ public class Item {
     private boolean inTheVoid;
     private int villageId;
     private long ownerId = -10;
+    public long lastOwner = -10;
     private boolean planted;
     private Item parent = null;
     private int weight = 0;
@@ -41,6 +42,8 @@ public class Item {
     public boolean streetLamp;
     public boolean flag;
     public boolean hollow;
+    public boolean isDragged;
+    public long lock = -10;
 
     public Item(int templateId) {
         this.templateId = templateId;
@@ -146,15 +149,14 @@ public class Item {
         return items;
     }
 
-    // TODO - Does this need blocking as well?
     public Item[] getItemsAsArray() {
-//        if (templateId == DeliveryContractsMod.getTemplateId())
-//            return new Item[0];
+        if (templateId == DeliveryContractsMod.getTemplateId() && tradeWindow != null)
+            return new Item[0];
         return items.toArray(new Item[0]);
     }
 
     public Item[] getAllItems(boolean b) {
-        if (templateId == DeliveryContractsMod.getTemplateId())
+        if (templateId == DeliveryContractsMod.getTemplateId() && tradeWindow != null)
             return new Item[0];
         return getItemsAsArray();
     }
@@ -245,11 +247,10 @@ public class Item {
     public boolean isBulkContainer() {
         return templateId == ItemList.bulkContainer;
     }
-
-    // TODO - Check item count instead?
-    public int getBulkNums() {
-        return 0;
-    }
+//
+//    public int getBulkNums() {
+//        return 0;
+//    }
 
     public boolean isNoTake() {
         return noTake;
@@ -418,5 +419,9 @@ public class Item {
 
     public int getValue() {
         return 1;
+    }
+
+    public long getLockId() {
+        return lock;
     }
 }

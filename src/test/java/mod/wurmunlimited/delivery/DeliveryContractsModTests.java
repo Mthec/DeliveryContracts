@@ -19,23 +19,6 @@ import static org.mockito.internal.verification.VerificationModeFactory.times;
 
 class DeliveryContractsModTests {
 
-//    @Test
-//    void testDestroyItem() throws Throwable {
-//        Item contract = new Item(DeliveryContractsMod.getTemplateId());
-//        Item toDeliver = new Item(ItemList.rake);
-//        new Creature().getInventory().insertItem(toDeliver);
-//        contract.setData(toDeliver.getWurmId());
-//        DeliveryContractsMod deliveryContractsMod = new DeliveryContractsMod();
-//
-//        InvocationHandler handler = deliveryContractsMod::destroyItem;
-//        Method method = mock(Method.class);
-//
-//        Object[] args = new Object[] {contract.getWurmId()};
-//        assertNull(handler.invoke(null, method, args));
-//        assertTrue(Items.wasDestroyed(toDeliver));
-//        verify(method, times(1)).invoke(null, args);
-//    }
-
     @Test
     void testCreateShop() throws Throwable {
         DeliveryContractsMod deliveryContractsMod = new DeliveryContractsMod();

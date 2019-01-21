@@ -7,6 +7,7 @@ import com.wurmonline.server.items.Item;
 public class MethodsItems {
     public static boolean isStealing = false;
     public static boolean isLootable = true;
+    public static boolean mayUseInventory;
 
     public static boolean checkIfStealing(Item item, Creature creature, Action action) {
         return isStealing;
@@ -19,11 +20,16 @@ public class MethodsItems {
     public static void reset() {
         isStealing = false;
         isLootable = true;
+        mayUseInventory = false;
     }
 
     public static boolean stopDragging(Creature creature, Item item) {
         Items.stopDragging(item);
 
         return true;
+    }
+
+    public static boolean mayUseInventoryOfVehicle(Creature creature, Item item) {
+        return mayUseInventory;
     }
 }
