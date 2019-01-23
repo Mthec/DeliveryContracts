@@ -1,6 +1,8 @@
 package com.wurmonline.server.creatures;
 
 import com.wurmonline.math.TilePos;
+import com.wurmonline.server.economy.Economy;
+import com.wurmonline.server.economy.Shop;
 import com.wurmonline.server.items.Item;
 import com.wurmonline.server.items.ItemList;
 import com.wurmonline.server.items.Trade;
@@ -33,6 +35,7 @@ public class Creature {
         communicator = new Communicator();
         inventory = new Item(ItemList.inventory);
         inventory.setOwnerId(id);
+        Creatures.getInstance().addCreature(this);
     }
 
     public Communicator getCommunicator() {
@@ -161,5 +164,21 @@ public class Creature {
 
     public boolean isOnSurface() {
         return onSurface;
+    }
+
+    public int getPower() {
+        return 0;
+    }
+
+    public Shop getShop() {
+        return Economy.getShopFor(this);
+    }
+
+    public Item getCarriedItem(int templateId) {
+        for (Item item : getInventory().getItems()) {
+            if (item.getTemplateId() == templateId)
+                return item;
+        }
+        return null;
     }
 }

@@ -173,6 +173,17 @@ class PackContractActionTests extends ActionBehaviourTest {
         assertFalse(contract.getItems().contains(pile.getItems().iterator().next()));
     }
 
+    @Test
+    void testContainerItemCanBePacked() {
+        Item backpack = new Item(ItemList.backPack);
+        backpack.hollow = true;
+        backpack.insertItem(new Item(ItemList.acorn));
+
+        assertTrue(mod.action(action, creature, backpack, mod.getActionId(), 0));
+        assertTrue(contract.getItems().contains(backpack));
+        assertEquals(1, backpack.getItemCount());
+    }
+
     // checkTake
 
     private void testPackingBlocked(String messageFragment) {
@@ -254,12 +265,6 @@ class PackContractActionTests extends ActionBehaviourTest {
     void testBlockedItemsNotAllowed() {
         Blocking.blocked = true;
         testPackingBlocked("through the wall");
-    }
-
-    @Test
-    void testNoTakeNotAllowed() {
-        itemToPack.noTake = true;
-        testPackingBlocked("");
     }
 
     @Test
@@ -395,6 +400,7 @@ class PackContractActionTests extends ActionBehaviourTest {
         village.getRoleFor(creature).setMayPickup(false);
         village.getRoleFor(creature).setMayPickupPlanted(false);
         itemToPack.setPlanted(true);
+        itemToPack.noTake = true;
         testPackingBlocked("not have permission");
 
     }
@@ -404,6 +410,7 @@ class PackContractActionTests extends ActionBehaviourTest {
         Village village = setUpVillage();
         village.getRoleFor(creature).setMayPickupPlanted(true);
         itemToPack.setPlanted(true);
+        itemToPack.noTake = true;
         testPackingNotBlocked();
     }
 
@@ -454,15 +461,17 @@ class PackContractActionTests extends ActionBehaviourTest {
         when(pile.canBeDropped(anyBoolean())).thenReturn(false, true);
         falseTrueCheck();
 
-        // TODO - Wait till decision on bridge check.
-//        when(pile.getBridgeId()).thenReturn(creature.getBridgeId() + 1, creature.getBridgeId());
-//        falseTrueCheck();
-
         MethodsItems.isStealing = true;
         falseCheck();
 
         MethodsItems.isStealing = false;
         trueCheck();
+    }
+
+    @Test
+    void testCannotTakeUniqueItems() {
+        itemToPack.unique = true;
+        testPackingBlocked("special");
     }
 
     // actuallyTake - Not tested directly.

@@ -58,13 +58,14 @@ class DeliverActionTests extends ActionBehaviourTest {
 
     // action
 
-    @Test
-    void testActionContractDestroyed() {
-        contract.insertItem(itemToPack);
-        mod.action(action, creature, waystone, mod.getActionId(), 0);
-
-        assertTrue(Items.wasDestroyed(contract));
-    }
+    // TODO - Uncomment after live testing.
+//    @Test
+//    void testActionContractDestroyed() {
+//        contract.insertItem(itemToPack);
+//        mod.action(action, creature, waystone, mod.getActionId(), 0);
+//
+//        assertTrue(Items.wasDestroyed(contract));
+//    }
 
     @Test
     void testActionContractNotDestroyedIfEmpty() {

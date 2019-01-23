@@ -44,6 +44,11 @@ public class Item {
     public boolean hollow;
     public boolean isDragged;
     public long lock = -10;
+    public boolean unique;
+    public long price = 1;
+    public long value = 1;
+    public boolean fullPrice = false;
+    public boolean noSellBack = false;
 
     public Item(int templateId) {
         this.templateId = templateId;
@@ -138,6 +143,8 @@ public class Item {
             item.parent.removeItem(item);
         item.parent = this;
         item.ownerId = ownerId;
+        for (Item i : item.getItems())
+            i.setOwnerId(ownerId);
         return items.add(item);
     }
 
@@ -150,13 +157,13 @@ public class Item {
     }
 
     public Item[] getItemsAsArray() {
-        if (templateId == DeliveryContractsMod.getTemplateId() && tradeWindow != null)
+        if (templateId == DeliveryContractsMod.getTemplateId() && isTraded())
             return new Item[0];
         return items.toArray(new Item[0]);
     }
 
     public Item[] getAllItems(boolean b) {
-        if (templateId == DeliveryContractsMod.getTemplateId() && tradeWindow != null)
+        if (templateId == DeliveryContractsMod.getTemplateId() && isTraded())
             return new Item[0];
         return getItemsAsArray();
     }
@@ -229,7 +236,7 @@ public class Item {
     }
 
     public boolean isFullprice() {
-        return isCoin();
+        return fullPrice || isCoin();
     }
 
     public boolean isMailed() {
@@ -247,10 +254,6 @@ public class Item {
     public boolean isBulkContainer() {
         return templateId == ItemList.bulkContainer;
     }
-//
-//    public int getBulkNums() {
-//        return 0;
-//    }
 
     public boolean isNoTake() {
         return noTake;
@@ -414,14 +417,34 @@ public class Item {
     }
 
     public int getPrice() {
-        return 1;
+        return (int)price;
     }
 
     public int getValue() {
-        return 1;
+        return (int)value;
+    }
+
+    public void setPrice(int price) {
+        this.price = price;
     }
 
     public long getLockId() {
         return lock;
+    }
+
+    public boolean isUnique() {
+        return unique;
+    }
+
+    public boolean isCombine() {
+        return false;
+    }
+
+    public boolean isNoSellback() {
+        return noSellBack;
+    }
+
+    public boolean isTraded() {
+        return tradeWindow != null;
     }
 }

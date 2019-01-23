@@ -2,6 +2,7 @@ package com.wurmonline.server.behaviours;
 
 import com.wurmonline.server.Items;
 import com.wurmonline.server.creatures.Creature;
+import com.wurmonline.server.creatures.Creatures;
 import com.wurmonline.server.economy.Economy;
 import com.wurmonline.server.items.Item;
 import com.wurmonline.server.items.ItemList;
@@ -30,6 +31,7 @@ public class ActionBehaviourTest {
         t.set(null, contractTemplateId);
 
         Blocking.blocked = false;
+        Creatures.reset();
         Items.reset();
         Vehicles.reset();
         MethodsItems.reset();

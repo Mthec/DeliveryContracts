@@ -74,6 +74,10 @@ public class PackResult {
         return new PackResult(false, "You cannot pack yourself into a contract.");
     }
 
+    public static PackResult TARGET_IS_UNIQUE(String itemName) {
+        return new PackResult(false, "The %s is to special.", itemName);
+    }
+
     public static PackResult UNKNOWN_FAILURE() {
         return new PackResult(false, "Something went wrong on the server.");
     }

@@ -1,6 +1,5 @@
 package mod.wurmunlimited.delivery;
 
-import com.wurmonline.server.FailedException;
 import com.wurmonline.server.Items;
 import com.wurmonline.server.NoSuchPlayerException;
 import com.wurmonline.server.Server;
@@ -13,7 +12,9 @@ import com.wurmonline.server.creatures.NoSuchCreatureException;
 import com.wurmonline.server.economy.Economy;
 import com.wurmonline.server.economy.MonetaryConstants;
 import com.wurmonline.server.economy.Shop;
-import com.wurmonline.server.items.*;
+import com.wurmonline.server.items.Item;
+import com.wurmonline.server.items.ItemTemplate;
+import com.wurmonline.server.items.ItemTypes;
 import com.wurmonline.shared.constants.IconConstants;
 import com.wurmonline.shared.constants.ItemMaterials;
 import javassist.NotFoundException;
@@ -23,17 +24,14 @@ import org.gotti.wurmunlimited.modsupport.ItemTemplateBuilder;
 import org.gotti.wurmunlimited.modsupport.actions.ModActions;
 
 import java.io.IOException;
-import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class DeliveryContractsMod implements WurmServerMod, Configurable, PreInitable, Initable, ItemTemplatesCreatedListener, ServerStartedListener {
     private static final Logger logger = Logger.getLogger(DeliveryContractsMod.class.getName());
@@ -66,7 +64,6 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
         val = properties.getProperty("contracts_on_traders");
         if (val != null && val.equals("false"))
             contractsOnTraders = false;
-
     }
 
     public static int getTemplateId() {
@@ -93,6 +90,7 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
                                     ItemTypes.ITEM_TYPE_NOT_MISSION,
                                     ItemTypes.ITEM_TYPE_HOLLOW,
                                     ItemTypes.ITEM_TYPE_HOLLOW_VIEWABLE, // TODO - Any side-effects?
+                                    ItemTypes.ITEM_TYPE_NOSELLBACK // TODO - Any side-effects?
                             })
                             .value(contractPrice)
                             .difficulty(100.0F)
@@ -149,29 +147,11 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
     public void init() {
         HookManager manager = HookManager.getInstance();
 
-//        // Destroy items contained in delivery contract when the contract is destroyed.
-//        manager.registerHook("com.wurmonline.server.Items",
-//                "destroyItem",
-//                "(JZZ)V",
-//                () -> this::destroyItem);
-
         // Add delivery contracts to traders default inventory.
         manager.registerHook("com.wurmonline.server.economy.Shop",
                 "createShop",
                 "(Lcom/wurmonline/server/creatures/Creature;)V",
                 () -> this::createShop);
-
-        // Make delivery contract look like Merchant Contract for Trader selling and Player trading.
-        // Restock sold contracts due to templateId conflict.
-        manager.registerHook("com.wurmonline.server.items.TradingWindow",
-                "swapOwners",
-                "()V",
-                () -> this::swapOwners);
-
-//        manager.registerHook("com.wurmonline.server.items.Item",
-//                "getFullWeight",
-//                "(Z)I",
-//                () -> this::getFullWeight);
 
         manager.registerHook("com.wurmonline.server.items.Item",
                 "isEmpty",
@@ -218,7 +198,7 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
         manager.registerHook("com.wurmonline.server.items.TradingWindow",
                 "mayAddFromInventory",
                 "(Lcom/wurmonline/server/creatures/Creature;Lcom/wurmonline/server/items/Item;)Z",
-                () -> this::mayAddToInventory);
+                () -> this::mayAddFromInventory);
 
         manager.registerHook("com.wurmonline.server.items.Item",
                 "isFullprice",
@@ -230,12 +210,12 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
             manager.registerHook("com.wurmonline.server.items.BuyerTradingWindow",
                     "mayAddFromInventory",
                     "(Lcom/wurmonline/server/creatures/Creature;Lcom/wurmonline/server/items/Item;)Z",
-                    () -> this::mayAddToInventory);
+                    () -> this::mayAddFromInventory);
             logger.info("Added hook to Buyer Merchant successfully.");
         } catch (NotFoundException ignored) {}
     }
 
-    private Object isFullPrice(Object o, Method method, Object[] args) throws InvocationTargetException, IllegalAccessException {
+    Object isFullPrice(Object o, Method method, Object[] args) throws InvocationTargetException, IllegalAccessException {
         Item item = (Item)o;
         if (item.getTemplateId() == templateId && item.getItemCount() > 0)
             return false;
@@ -248,19 +228,19 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
         return parent != null && parent.getTemplateId() == templateId;
     }
 
-    private Object mayAddToInventory(Object o, Method method, Object[] args) throws InvocationTargetException, IllegalAccessException {
+    Object mayAddFromInventory(Object o, Method method, Object[] args) throws InvocationTargetException, IllegalAccessException {
         if (isInContract((Item)args[1]))
             return false;
         return method.invoke(o, args);
     }
 
-    private Object moveToItem(Object o, Method method, Object[] args) throws InvocationTargetException, IllegalAccessException {
+    Object moveToItem(Object o, Method method, Object[] args) throws InvocationTargetException, IllegalAccessException {
         if (isInContract((Item)o))
             return false;
         return method.invoke(o, args);
     }
 
-    private Object setOwner(Object o, Method method, Object[] args) throws InvocationTargetException, IllegalAccessException {
+     Object setOwner(Object o, Method method, Object[] args) throws InvocationTargetException, IllegalAccessException {
         Item item = (Item)o;
         // TODO - What about sub-sub-items?
         Item contract = item.getParentOrNull();
@@ -282,7 +262,7 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
         return method.invoke(o, args);
     }
 
-    private Object addCarriedWeight(Object o, Method method, Object[] args) throws InvocationTargetException, IllegalAccessException {
+    Object addCarriedWeight(Object o, Method method, Object[] args) throws InvocationTargetException, IllegalAccessException {
         if (blockedChangeCarryWeight(o, args))
             return null;
         return method.invoke(o, args);
@@ -305,13 +285,13 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
         return false;
     }
 
-    private Object getItemsAsArray(Object o, Method method, Object[] args) throws InvocationTargetException, IllegalAccessException {
+    Object getItemsAsArray(Object o, Method method, Object[] args) throws InvocationTargetException, IllegalAccessException {
         if (((Item)o).getTemplateId() == templateId && ((Item)o).isTraded())
             return new Item[0];
         return method.invoke(o, args);
     }
 
-    private Object isEmpty(Object o, Method method, Object[] args) throws InvocationTargetException, IllegalAccessException {
+    Object isEmpty(Object o, Method method, Object[] args) throws InvocationTargetException, IllegalAccessException {
         if (((Item)o).getTemplateId() == templateId && ((Item)o).isTraded())
             return true;
         return method.invoke(o, args);
@@ -326,34 +306,5 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
         }
 
         return method.invoke(o, args);
-    }
-
-    Object swapOwners(Object o, Method method, Object[] args) throws InvocationTargetException, IllegalAccessException {
-        if (((TradingWindow)o).getWurmId() != 3)
-            return method.invoke(o, args);
-
-        Optional<Item> maybeContract = Stream.of(((TradingWindow) o).getItems()).filter(item -> item.getTemplateId() == templateId).findAny();
-        if (!maybeContract.isPresent())
-            return method.invoke(o, args);
-
-        Item contract = maybeContract.get();
-        contract.setTemplateId(ItemList.merchantContract);
-
-        try {
-            method.invoke(o, args);
-
-            Field windowOwner = TradingWindow.class.getDeclaredField("windowowner");
-            windowOwner.setAccessible(true);
-            Creature trader = (Creature)windowOwner.get(o);
-            if (trader.isNpcTrader() && !trader.getShop().isPersonal()) {
-                Item newItem = ItemFactory.createItem(templateId, contract.getQualityLevel(), contract.getTemplate().getMaterial(), (byte)0, null);
-                trader.getInventory().insertItem(newItem);
-            }
-        } catch (NoSuchTemplateException | FailedException | NoSuchFieldException e) {
-            logger.log(Level.WARNING, e.getMessage(), e);
-        } finally {
-            contract.setTemplateId(templateId);
-        }
-        return null;
     }
 }

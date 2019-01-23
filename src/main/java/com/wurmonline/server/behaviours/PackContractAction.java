@@ -105,13 +105,14 @@ public class PackContractAction implements ModAction, BehaviourProvider, ActionP
             }
 
             try {
-                // TODO - What about different bridge?
                 BlockingResult result = Blocking.getBlockerBetween(performer, target, 4);
                 if (result != null) {
                     return PackResult.TARGET_BLOCKED(target.getName(), result.getFirstBlocker().getName());
                 }
 
-                if (!target.isNoTake()) {
+                if (target.isUnique()) {
+                    return PackResult.TARGET_IS_UNIQUE(target.getName());
+                } else {
                     boolean sameVehicle = false;
                     Item top = target.getTopParentOrNull();
                     if (top != null && top.isVehicle() && top.getWurmId() == performer.getVehicle()) {
@@ -225,6 +226,7 @@ public class PackContractAction implements ModAction, BehaviourProvider, ActionP
         }
 
         contract.insertItem(target, true);
+        performer.getCommunicator().sendUpdateInventoryItem(target);
         target.setOnBridge(-10L);
         target.setLastMaintained(WurmCalendar.currentTime);
     }
@@ -240,7 +242,7 @@ public class PackContractAction implements ModAction, BehaviourProvider, ActionP
                     sb.append(target.getName()).append(" (");
 
                     Item[] toPack = new Item[0];
-                    if (target.getItemCount() == 0 && target.getOwnerId() == -10) {
+                    if (target.getOwnerId() == -10 && target.getTemplateId() != ItemList.itemPile) {
                         toPack = new Item[] {target};
                     } else if (target.getTemplateId() == ItemList.itemPile) {
                         toPack = target.getItemsAsArray();

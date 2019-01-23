@@ -11,4 +11,12 @@ public class ItemTemplate {
     public boolean isContainerWithSubItems() {
         return false;
     }
+
+    public byte getMaterial() {
+        return 0;
+    }
+
+    public int getTemplateId() {
+        return templateId;
+    }
 }
