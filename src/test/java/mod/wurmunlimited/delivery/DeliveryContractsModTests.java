@@ -401,22 +401,6 @@ class DeliveryContractsModTests {
     }
 
     @Test
-    void testAddCarriedWeightDoesNotBlockOtherWeightChanges() throws Throwable {
-        DeliveryContractsMod deliveryContractsMod = new DeliveryContractsMod();
-        Creature player = new Player();
-        int weight = 100000;
-
-        InvocationHandler handler = deliveryContractsMod::addCarriedWeight;
-        Method method = mock(Method.class);
-        Object[] args = new Object[] { weight };
-
-        DeliveryContractsMod.addWeightToBlock(player, weight + 1);
-
-        assertNull(handler.invoke(player, method, args));
-        verify(method, times(1)).invoke(player, args);
-    }
-
-    @Test
     void testRemoveCarriedWeightBlocks() throws Throwable {
         DeliveryContractsMod deliveryContractsMod = new DeliveryContractsMod();
         Creature player = new Player();
@@ -430,22 +414,6 @@ class DeliveryContractsModTests {
 
         assertTrue((Boolean)handler.invoke(player, method, args));
         verify(method, never()).invoke(player, args);
-
-        assertNull(handler.invoke(player, method, args));
-        verify(method, times(1)).invoke(player, args);
-    }
-
-    @Test
-    void testRemoveCarriedWeightDoesNotBlockOtherWeightChanges() throws Throwable {
-        DeliveryContractsMod deliveryContractsMod = new DeliveryContractsMod();
-        Creature player = new Player();
-        int weight = 100000;
-
-        InvocationHandler handler = deliveryContractsMod::removeCarriedWeight;
-        Method method = mock(Method.class);
-        Object[] args = new Object[] { weight };
-
-        DeliveryContractsMod.addWeightToBlock(player, weight + 1);
 
         assertNull(handler.invoke(player, method, args));
         verify(method, times(1)).invoke(player, args);

@@ -29,4 +29,8 @@ public class Zones {
         village = null;
         zones.clear();
     }
+
+    public static VolaTile getTileOrNull(int tilecoord, int tilecoord1, boolean onSurface) {
+        return new VolaTile(0);
+    }
 }

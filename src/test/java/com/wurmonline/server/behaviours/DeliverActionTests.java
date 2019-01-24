@@ -124,7 +124,7 @@ class DeliverActionTests extends ActionBehaviourTest {
         contract.insertItem(itemToPack);
         itemToPack.setWeight(20);
         creature.setCarry(10);
-        creature.currentTile = new VolaTile(99);
+        creature.currentTile = new VolaTile(100);
         mod.action(action, creature, waystone, mod.getActionId(), 0);
 
         assertFalse(creature.getInventory().getItems().contains(itemToPack));

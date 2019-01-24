@@ -57,6 +57,10 @@ public class Item {
         Items.addItems(this);
     }
 
+    public static int[] getDropTile(Creature performer) {
+        return new int[] { 1, 1 };
+    }
+
     public void setTemplateId(int templateId) {
         this.templateId = templateId;
     }
@@ -174,6 +178,9 @@ public class Item {
     }
 
     public void putItemInfrontof(Creature creature) {
+        Item parent = getParentOrNull();
+        if (parent != null)
+            parent.removeItem(this);
         inFrontOf = creature;
     }
 
@@ -451,5 +458,26 @@ public class Item {
 
     public byte getRarity() {
         return 0;
+    }
+
+    // TODO - Do I need to test these options as well?
+    public boolean isSurfaceOnly() {
+        return false;
+    }
+
+    public boolean isNoDrop() {
+        return false;
+    }
+
+    public boolean isComponentItem() {
+        return false;
+    }
+
+    public boolean isDecoration() {
+        return false;
+    }
+
+    public boolean isOutsideOnly() {
+        return false;
     }
 }

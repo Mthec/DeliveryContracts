@@ -6,6 +6,10 @@ import com.wurmonline.server.items.Item;
 public class Communicator {
     private String lastMessage = "";
 
+    public void sendNormalServerMessage(String message, byte b) {
+        sendNormalServerMessage(message);
+    }
+
     public void sendNormalServerMessage(String message) {
         System.out.println(message);
         lastMessage = message;

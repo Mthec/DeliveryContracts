@@ -5,6 +5,7 @@ import com.wurmonline.server.structures.Structure;
 public class VolaTile {
 
     private final int numberOfItems;
+    private int numberOfDecorations;
 
     public VolaTile(int numberOfItems) {
         this.numberOfItems = numberOfItems;
@@ -20,5 +21,9 @@ public class VolaTile {
 
     public Structure getStructure() {
         return null;
+    }
+
+    public int getNumberOfDecorations(int dropFloorLevel) {
+        return numberOfDecorations;
     }
 }

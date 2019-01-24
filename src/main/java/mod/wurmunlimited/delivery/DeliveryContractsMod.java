@@ -46,7 +46,13 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
     private static Map<Creature, Integer> weightBlocker = new HashMap<>();
 
     public static void addWeightToBlock(Creature creature, int weight) {
-        weightBlocker.put(creature, weight);
+        weightBlocker.merge(creature, weight, Integer::sum);
+    }
+
+    public static void removeWeightToBlock(Creature creature, int weight) {
+        weightBlocker.merge(creature, -weight, Integer::sum);
+        if (weightBlocker.get(creature) == 0)
+            weightBlocker.remove(creature);
     }
 
     @Override
@@ -93,8 +99,7 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
                                     ItemTypes.ITEM_TYPE_LOADED,
                                     ItemTypes.ITEM_TYPE_NOT_MISSION,
                                     ItemTypes.ITEM_TYPE_HOLLOW,
-                                    ItemTypes.ITEM_TYPE_HOLLOW_VIEWABLE, // TODO - Any side-effects?
-                                    ItemTypes.ITEM_TYPE_NOSELLBACK // TODO - Any side-effects?
+                                    ItemTypes.ITEM_TYPE_NOSELLBACK
                             })
                             .value(contractPrice)
                             .difficulty(100.0F)
@@ -303,8 +308,10 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
     private boolean blockedChangeCarryWeight(Object o, Object[] args) {
         Creature creature = (Creature)o;
         if (weightBlocker.containsKey(creature)) {
-            if (weightBlocker.get(creature) == (int)args[0]) {
-                weightBlocker.remove(creature);
+            int weight = (int)args[0];
+            int block = weightBlocker.get(creature);
+            if (weight <= block) {
+                removeWeightToBlock(creature, weight);
                 return true;
             }
         }
@@ -347,4 +354,8 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
 
         return method.invoke(o, args);
     }
+
+    // TODO - Item stack in pile/container instead of just inventory.
+    // TODO - getFullweight
+    // Needed for adding items to inventory when contract is too heavy.
 }

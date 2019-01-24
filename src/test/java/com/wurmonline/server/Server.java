@@ -20,4 +20,8 @@ public class Server {
     public Creature getCreature(long wurmId) {
         return Creatures.getInstance().getCreatureOrNull(wurmId);
     }
+
+    public void broadCastAction(String message, Creature performer, int tileDist) {
+        System.out.println(message);
+    }
 }

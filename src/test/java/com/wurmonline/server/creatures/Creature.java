@@ -71,6 +71,10 @@ public class Creature {
     }
 
     public int getFloorLevel(boolean b) {
+        return getFloorLevel();
+    }
+
+    public int getFloorLevel() {
         return 1;
     }
 

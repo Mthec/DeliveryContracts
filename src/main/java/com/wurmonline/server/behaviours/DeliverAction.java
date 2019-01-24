@@ -2,17 +2,15 @@ package com.wurmonline.server.behaviours;
 
 import com.wurmonline.server.Items;
 import com.wurmonline.server.NoSuchItemException;
-import com.wurmonline.server.NoSuchPlayerException;
 import com.wurmonline.server.creatures.Creature;
-import com.wurmonline.server.creatures.NoSuchCreatureException;
 import com.wurmonline.server.items.Item;
 import com.wurmonline.server.items.ItemList;
 import com.wurmonline.server.villages.Village;
-import com.wurmonline.server.zones.NoSuchZoneException;
 import com.wurmonline.server.zones.Zones;
 import mod.wurmunlimited.delivery.DeliveryContractsMod;
 import org.gotti.wurmunlimited.modsupport.actions.*;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.logging.Logger;
@@ -21,6 +19,7 @@ public class DeliverAction implements ModAction, BehaviourProvider, ActionPerfor
     private static final Logger logger = Logger.getLogger(DeliverAction.class.getName());
     private final short actionId;
     private final ActionEntry actionEntry;
+    private final short dropAsPileId = (short)638;
 
     public DeliverAction() {
         actionId = (short)ModActions.getNextActionId();
@@ -63,25 +62,45 @@ public class DeliverAction implements ModAction, BehaviourProvider, ActionPerfor
 
             try {
                 Item source = Items.getItem(action.getSubjectId());
-                if (source.getItemCount() > 0){
+                if (source.getItemCount() > 0) {
 
-                    if (performer.currentTile.getNumberOfItems(performer.currentTile.getDropFloorLevel(performer.getFloorLevel(true))) + source.getItemCount() > 99) {
-                        performer.getCommunicator().sendNormalServerMessage("The area is too littered with items already.");
-                    } else {
-                        for (Item item : source.getItems().toArray(new Item[0])) {
-                            DeliveryContractsMod.addWeightToBlock(performer, item.getWeightGrams());
-                            item.putItemInfrontof(performer);
-                        }
+//                    if (performer.currentTile.getNumberOfItems(performer.getFloorLevel(true)) + source.getItemCount() > 99) {
+//                        performer.getCommunicator().sendNormalServerMessage("The area is too littered with items already.");
+//                    } else {
+                    Item[] items = source.getItemsAsArray();
+                    DeliveryContractsMod.addWeightToBlock(performer, Arrays.stream(items).mapToInt(Item::getWeightGrams).sum());
+                    ItemBehaviour b = (ItemBehaviour)Behaviours.getInstance().getBehaviour(BehaviourList.itemBehaviour);
+                    b.action(null, performer, items, dropAsPileId, 0);
+//                        for (Item item : source.getItems().toArray(new Item[0])) {
+//                            DeliveryContractsMod.addWeightToBlock(performer, item.getWeightGrams());
+//                            // TODO - Onepertile
+//                            // TODO - Fourpertile
+//                            // TODO - Already dropped items not added to volatile items layer for some reason.
+//
+//
+////                            if (MethodsItems.drop(performer, item, false).length == 0) {
+////                                logger.warning("Failure");
+////                            }
+//                            //item.putItemInfrontof(performer);
+//                        }
                         //Items.destroyItem(source.getWurmId());
+                    if (source.getItemCount() == items.length) {
+                        return true;
+                    } else if (source.getItemCount() == 0) {
                         source.setName("delivery contract");
                         source.setDescription("");
+                        performer.getCommunicator().sendNormalServerMessage("The spirits place the item" + (items.length == 1 ? "" : "s") + " in front of you.");
+                    } else {
+                        DeliveryContractsMod.removeWeightToBlock(performer, source.getItems().stream().mapToInt(Item::getWeightGrams).sum());
+                        // TODO - "Some of the item(s)".
                         performer.getCommunicator().sendNormalServerMessage("The spirits place the item" + (source.getItemCount() == 1 ? "" : "s") + " in front of you.");
                     }
 
                     return true;
                 }
-            } catch (NoSuchItemException | NoSuchCreatureException | NoSuchPlayerException | NoSuchZoneException e) {
+            } catch (NoSuchItemException | NoSuchBehaviourException e) {
                 performer.getCommunicator().sendNormalServerMessage("The spirits fly around in circles looking confused.");
+                // TODO - Change.  re behaviour.
                 logger.warning("An error occurred when unpacking " + action.getSubjectId() + ".  Some items may not have been placed.");
                 e.printStackTrace();
                 return true;

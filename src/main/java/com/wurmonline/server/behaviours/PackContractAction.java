@@ -260,6 +260,7 @@ public class PackContractAction implements ModAction, BehaviourProvider, ActionP
                 Item source = Items.getItem(action.getSubjectId());
                 if (source.getItemCount() == 0) {
                     StringBuilder sb = new StringBuilder();
+                    // TODO - Incorrect.  Need name from first item instead of possible pile?
                     sb.append(getFullName(target)).append(" (");
 
                     Item[] toPack = new Item[0];
