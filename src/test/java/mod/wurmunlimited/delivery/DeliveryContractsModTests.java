@@ -1,5 +1,6 @@
 package mod.wurmunlimited.delivery;
 
+import com.wurmonline.server.behaviours.ActionEntry;
 import com.wurmonline.server.creatures.Creature;
 import com.wurmonline.server.creatures.Creatures;
 import com.wurmonline.server.economy.Economy;
@@ -9,12 +10,14 @@ import com.wurmonline.server.items.ItemList;
 import com.wurmonline.server.items.ItemTemplate;
 import com.wurmonline.server.items.TradingWindow;
 import com.wurmonline.server.players.Player;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.stubbing.Answer;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
+import java.util.List;
 import java.util.Properties;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -22,6 +25,15 @@ import static org.mockito.Mockito.*;
 import static org.mockito.internal.verification.VerificationModeFactory.times;
 
 class DeliveryContractsModTests {
+
+    private static final int contractTemplateId = 12356;
+
+    @BeforeEach
+    void setUp() throws NoSuchFieldException, IllegalAccessException {
+        Field t = DeliveryContractsMod.class.getDeclaredField("templateId");
+        t.setAccessible(true);
+        t.set(null, contractTemplateId);
+    }
 
     @Test
     void testCreateShop() throws Throwable {
@@ -252,7 +264,7 @@ class DeliveryContractsModTests {
         Item item = new Item(ItemList.acorn);
         contract.insertItem(item);
 
-        Object[] args = new Object[] { new Player(), item };
+        Object[] args = new Object[] { new Player(), item.getWurmId(), false };
         assertNull(handler.invoke(contract, method, args));
         verify(method, times(1)).invoke(contract, args);
     }
@@ -270,6 +282,42 @@ class DeliveryContractsModTests {
         Object[] args = new Object[] { new Player(), item.getWurmId(), false };
         assertFalse((Boolean)handler.invoke(item, method, args));
         verify(method, never()).invoke(item, args);
+    }
+
+    @Test
+    void testMayNotMoveToItemIfInItemThatIsInAContract() throws Throwable {
+        DeliveryContractsMod deliveryContractsMod = new DeliveryContractsMod();
+        InvocationHandler handler = deliveryContractsMod::moveToItem;
+        Method method = mock(Method.class);
+
+        Item contract = new Item(DeliveryContractsMod.getTemplateId());
+        Item containerInContract = new Item(ItemList.backPack);
+        contract.insertItem(containerInContract);
+        Item containerInContainerInContract = new Item(ItemList.backPack);
+        containerInContract.insertItem(containerInContainerInContract);
+        Item item = new Item(ItemList.acorn);
+        containerInContainerInContract.insertItem(item);
+
+        Object[] args = new Object[] { new Player(), item.getWurmId(), false };
+        assertFalse((Boolean)handler.invoke(item, method, args));
+        verify(method, never()).invoke(item, args);
+    }
+
+    @Test
+    void testMayNotMoveToItemIfDestinationIsInContract() throws Throwable {
+        DeliveryContractsMod deliveryContractsMod = new DeliveryContractsMod();
+        InvocationHandler handler = deliveryContractsMod::moveToItem;
+        Method method = mock(Method.class);
+
+        Item contract = new Item(DeliveryContractsMod.getTemplateId());
+        Item containerInContract = new Item(ItemList.backPack);
+        containerInContract.hollow = true;
+        contract.insertItem(containerInContract);
+        Item item = new Item(ItemList.acorn);
+
+        Object[] args = new Object[] { new Player(), item.getWurmId(), false };
+        assertFalse((Boolean)handler.invoke(containerInContract, method, args));
+        verify(method, never()).invoke(containerInContract, args);
     }
 
     private int changeOwner(Object[] args, int parentTemplateId, int weight) throws Throwable {
@@ -324,13 +372,13 @@ class DeliveryContractsModTests {
 
     @Test
     void testSetOwnerStuffBlocksContractContentsWeightBeingAddedToCreature() throws Throwable {
-        assertEquals(0, setOwnerStuff(new ItemTemplate(DeliveryContractsMod.getTemplateId()), 1000));
+        assertEquals(0, setOwnerStuff(new ItemTemplate(DeliveryContractsMod.getTemplateId(), "contract"), 1000));
     }
 
     @Test
     void testSetOwnerStuffAllowsNotContractContentsWeightBeingAddedToCreature() throws Throwable {
         int weight = 1000;
-        assertEquals(weight, setOwnerStuff(new ItemTemplate(ItemList.backPack), weight));
+        assertEquals(weight, setOwnerStuff(new ItemTemplate(ItemList.backPack, "backpack"), weight));
     }
 
     @Test
@@ -516,5 +564,61 @@ class DeliveryContractsModTests {
         Object[] args = new Object[0];
         assertNull(handler.invoke(contract, method, args));
         verify(method, times(1)).invoke(contract, args);
+    }
+
+    @Test
+    void testBlockBehavioursForItemsInContract() throws Throwable {
+        DeliveryContractsMod deliveryContractsMod = new DeliveryContractsMod();
+        Creature player = new Player();
+        Item contract = new Item(DeliveryContractsMod.getTemplateId());
+        Item itemInContract = new Item(ItemList.ironBar);
+        contract.insertItem(itemInContract);
+
+        InvocationHandler handler = deliveryContractsMod::getBehavioursFor;
+        Method method = mock(Method.class);
+        Object[] args = new Object[] { player, itemInContract };
+
+        @SuppressWarnings("unchecked")
+        List<ActionEntry> entries = (List<ActionEntry>)handler.invoke(itemInContract, method, args);
+        assertNotNull(entries);
+        assertEquals(0, entries.size());
+        verify(method, never()).invoke(itemInContract, args);
+    }
+
+    @Test
+    void testDoesNotBlockBehavioursForItemsNotInContract() throws Throwable {
+        DeliveryContractsMod deliveryContractsMod = new DeliveryContractsMod();
+        Creature player = new Player();
+        Item contract = new Item(ItemList.backPack);
+        Item itemInContract = new Item(ItemList.ironBar);
+        contract.insertItem(itemInContract);
+
+        InvocationHandler handler = deliveryContractsMod::getBehavioursFor;
+        Method method = mock(Method.class);
+        Object[] args = new Object[] { player, itemInContract };
+
+        @SuppressWarnings("unchecked")
+        List<ActionEntry> entries = (List<ActionEntry>)handler.invoke(itemInContract, method, args);
+        assertNull(entries);
+        verify(method, times(1)).invoke(itemInContract, args);
+    }
+
+    @Test
+    void testBlockBehavioursForAlternateGetBehavioursForItemsInContract() throws Throwable {
+        DeliveryContractsMod deliveryContractsMod = new DeliveryContractsMod();
+        Creature player = new Player();
+        Item contract = new Item(DeliveryContractsMod.getTemplateId());
+        Item itemInContract = new Item(ItemList.ironBar);
+        contract.insertItem(itemInContract);
+
+        InvocationHandler handler = deliveryContractsMod::getBehavioursFor;
+        Method method = mock(Method.class);
+        Object[] args = new Object[] { player, contract, itemInContract };
+
+        @SuppressWarnings("unchecked")
+        List<ActionEntry> entries = (List<ActionEntry>)handler.invoke(itemInContract, method, args);
+        assertNotNull(entries);
+        assertEquals(0, entries.size());
+        verify(method, never()).invoke(itemInContract, args);
     }
 }

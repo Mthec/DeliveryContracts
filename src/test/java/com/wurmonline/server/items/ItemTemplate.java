@@ -3,9 +3,11 @@ package com.wurmonline.server.items;
 public class ItemTemplate {
 
     int templateId;
+    String name;
 
-    public ItemTemplate(int templateId) {
+    public ItemTemplate(int templateId, String name) {
         this.templateId = templateId;
+        this.name = name;
     }
 
     public boolean isContainerWithSubItems() {
@@ -18,5 +20,9 @@ public class ItemTemplate {
 
     public int getTemplateId() {
         return templateId;
+    }
+
+    public String getName() {
+        return name;
     }
 }

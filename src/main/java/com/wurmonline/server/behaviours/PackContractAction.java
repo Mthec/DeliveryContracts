@@ -17,6 +17,7 @@ import com.wurmonline.server.zones.NoSuchZoneException;
 import com.wurmonline.server.zones.VolaTile;
 import com.wurmonline.server.zones.Zone;
 import com.wurmonline.server.zones.Zones;
+import com.wurmonline.shared.util.MaterialUtilities;
 import mod.wurmunlimited.delivery.DeliveryContractsMod;
 import mod.wurmunlimited.delivery.PackResult;
 import org.gotti.wurmunlimited.modsupport.actions.*;
@@ -231,7 +232,27 @@ public class PackContractAction implements ModAction, BehaviourProvider, ActionP
         target.setLastMaintained(WurmCalendar.currentTime);
     }
 
-    // TODO - Warning message when one item but multiple selected?  Only when item is in inventory?
+    private String getFullName(Item item) {
+        StringBuilder sb = new StringBuilder();
+
+        switch (item.getRarity()) {
+            case 1:
+                sb.append("rare ");
+                break;
+            case 2:
+                sb.append("supreme ");
+                break;
+            case 3:
+                sb.append("fantastic ");
+                break;
+        }
+
+        MaterialUtilities.appendNameWithMaterialSuffix(sb,
+                item.getName().equals("") ? item.getTemplate().getName() : item.getName(),
+                item.getMaterial());
+        return sb.toString();
+    }
+
     @Override
     public boolean action(Action action, Creature performer, Item target, short num, float counter) {
         if (num == actionId) {
@@ -239,7 +260,7 @@ public class PackContractAction implements ModAction, BehaviourProvider, ActionP
                 Item source = Items.getItem(action.getSubjectId());
                 if (source.getItemCount() == 0) {
                     StringBuilder sb = new StringBuilder();
-                    sb.append(target.getName()).append(" (");
+                    sb.append(getFullName(target)).append(" (");
 
                     Item[] toPack = new Item[0];
                     if (target.getOwnerId() == -10 && target.getTemplateId() != ItemList.itemPile) {
@@ -247,13 +268,13 @@ public class PackContractAction implements ModAction, BehaviourProvider, ActionP
                     } else if (target.getTemplateId() == ItemList.itemPile) {
                         toPack = target.getItemsAsArray();
                     } else {
-                        // TODO - Can't be type, maybe name?  Is the inventory always grouped by name?
-                        // TODO - Confirmation?
+                        // Inventory groups by something similar to getFullName.
+                        String targetName = getFullName(target);
                         Item parent = target.getParentOrNull();
                         List<Item> items = new ArrayList<>();
                         if (parent != null) {
                             for (Item item : parent.getItems()) {
-                                if (item.getName().equals(target.getName())) {
+                                if (getFullName(item).equals(targetName)) {
                                     items.add(item);
                                 }
                             }

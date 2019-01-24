@@ -49,6 +49,7 @@ public class Item {
     public long value = 1;
     public boolean fullPrice = false;
     public boolean noSellBack = false;
+    public byte material = 0;
 
     public Item(int templateId) {
         this.templateId = templateId;
@@ -65,7 +66,7 @@ public class Item {
     }
 
     public ItemTemplate getTemplate() {
-        return new ItemTemplate(templateId);
+        return new ItemTemplate(templateId, name);
     }
 
     public void setData(long data) {
@@ -409,7 +410,7 @@ public class Item {
     }
 
     public byte getMaterial() {
-        return 0;
+        return material;
     }
 
     public boolean isPurchased() {
@@ -446,5 +447,9 @@ public class Item {
 
     public boolean isTraded() {
         return tradeWindow != null;
+    }
+
+    public byte getRarity() {
+        return 0;
     }
 }

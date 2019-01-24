@@ -1,8 +1,10 @@
 package mod.wurmunlimited.delivery;
 
 import com.wurmonline.server.Items;
+import com.wurmonline.server.NoSuchItemException;
 import com.wurmonline.server.NoSuchPlayerException;
 import com.wurmonline.server.Server;
+import com.wurmonline.server.behaviours.ActionEntry;
 import com.wurmonline.server.behaviours.BehaviourList;
 import com.wurmonline.server.behaviours.DeliverAction;
 import com.wurmonline.server.behaviours.PackContractAction;
@@ -13,6 +15,7 @@ import com.wurmonline.server.economy.Economy;
 import com.wurmonline.server.economy.MonetaryConstants;
 import com.wurmonline.server.economy.Shop;
 import com.wurmonline.server.items.Item;
+import com.wurmonline.server.items.ItemList;
 import com.wurmonline.server.items.ItemTemplate;
 import com.wurmonline.server.items.ItemTypes;
 import com.wurmonline.shared.constants.IconConstants;
@@ -26,6 +29,7 @@ import org.gotti.wurmunlimited.modsupport.actions.ModActions;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
@@ -205,6 +209,17 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
                 "()Z",
                 () -> this::isFullPrice);
 
+        // Block actions whilst item is inside a contract.
+        manager.registerHook("com.wurmonline.server.behaviours.ItemBehaviour",
+                "getBehavioursFor",
+                "(Lcom/wurmonline/server/creatures/Creature;Lcom/wurmonline/server/items/Item;)Ljava/util/List;",
+                () -> this::getBehavioursFor);
+
+        manager.registerHook("com.wurmonline.server.behaviours.ItemBehaviour",
+                "getBehavioursFor",
+                "(Lcom/wurmonline/server/creatures/Creature;Lcom/wurmonline/server/items/Item;Lcom/wurmonline/server/items/Item;)Ljava/util/List;",
+                () -> this::getBehavioursFor);
+
         try {
             manager.getClassPool().getCtClass("com.wurmonline.server.items.BuyerTradingWindow");
             manager.registerHook("com.wurmonline.server.items.BuyerTradingWindow",
@@ -222,10 +237,20 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
 
         return method.invoke(o, args);
     }
-
     private boolean isInContract(Item item) {
-        Item parent = item.getParentOrNull();
-        return parent != null && parent.getTemplateId() == templateId;
+        Item maybeContract = item.getParentOrNull();
+
+        if (maybeContract != null) {
+            while (true) {
+                Item parent = maybeContract.getParentOrNull();
+                if (parent == null || parent.getTemplateId() == ItemList.inventory) {
+                    break;
+                }
+                maybeContract = parent;
+            }
+        }
+
+        return maybeContract != null && maybeContract.getTemplateId() == templateId;
     }
 
     Object mayAddFromInventory(Object o, Method method, Object[] args) throws InvocationTargetException, IllegalAccessException {
@@ -235,17 +260,15 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
     }
 
     Object moveToItem(Object o, Method method, Object[] args) throws InvocationTargetException, IllegalAccessException {
-        if (isInContract((Item)o))
-            return false;
+        try {
+            if (isInContract((Item)o) || isInContract(Items.getItem((long)args[1])))
+                return false;
+        } catch (NoSuchItemException ignored) {}
         return method.invoke(o, args);
     }
 
-    // TODO - Pour bypasses contract.
-    // TODO - Dragging items into items in contract.
-
     Object setOwner(Object o, Method method, Object[] args) throws InvocationTargetException, IllegalAccessException {
         Item item = (Item)o;
-        // TODO - What about sub-sub-items?
         Item contract = item.getParentOrNull();
         try {
             if (contract != null && contract.getTemplateId() == templateId) {
@@ -306,6 +329,20 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
 
             Item inventory = toReturn.getInventory();
             inventory.insertItem(Creature.createItem(templateId, (float)(10 + Server.rand.nextInt(80))));
+        }
+
+        return method.invoke(o, args);
+    }
+
+    Object getBehavioursFor(Object o, Method method, Object[] args) throws InvocationTargetException, IllegalAccessException {
+        Item target;
+        if (args.length == 2)
+            target = (Item)args[1];
+        else
+            target = (Item)args[2];
+
+        if (isInContract(target)) {
+            return new ArrayList<ActionEntry>();
         }
 
         return method.invoke(o, args);

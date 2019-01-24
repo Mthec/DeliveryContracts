@@ -7,6 +7,7 @@ import com.wurmonline.server.structures.Blocking;
 import com.wurmonline.server.villages.Village;
 import com.wurmonline.server.zones.Zone;
 import com.wurmonline.server.zones.Zones;
+import com.wurmonline.shared.constants.ItemMaterials;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -182,6 +183,33 @@ class PackContractActionTests extends ActionBehaviourTest {
         assertTrue(mod.action(action, creature, backpack, mod.getActionId(), 0));
         assertTrue(contract.getItems().contains(backpack));
         assertEquals(1, backpack.getItemCount());
+    }
+
+    @Test
+    void testItemsPackedBasedOnFullName() {
+        // i.e. lumps not "lumped" together.
+        int number = 20;
+        Item inventory = creature.getInventory();
+        for (int i = 0; i < number; i++) {
+            Item lump = new Item(ItemList.goldBar);
+            lump.setName("lump");
+            lump.material = ItemMaterials.MATERIAL_GOLD;
+            inventory.insertItem(lump);
+
+            lump = new Item(ItemList.ironBar);
+            lump.setName("lump");
+            lump.material = ItemMaterials.MATERIAL_IRON;
+            inventory.insertItem(lump);
+        }
+
+        Item goldLump = inventory.getItems().stream().filter(item -> item.getMaterial() == ItemMaterials.MATERIAL_GOLD)
+                .findAny().orElseThrow(RuntimeException::new);
+
+        assertTrue(mod.action(action, creature, goldLump, mod.getActionId(), 0));
+        assertEquals(number, contract.getItemCount());
+        assertEquals(number, inventory.getItemCount());
+        assertTrue(contract.getItems().stream().allMatch(item -> item.getMaterial() == ItemMaterials.MATERIAL_GOLD));
+        assertTrue(inventory.getItems().stream().allMatch(item -> item.getMaterial() == ItemMaterials.MATERIAL_IRON));
     }
 
     // checkTake
