@@ -240,7 +240,10 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
         return method.invoke(o, args);
     }
 
-     Object setOwner(Object o, Method method, Object[] args) throws InvocationTargetException, IllegalAccessException {
+    // TODO - Pour bypasses contract.
+    // TODO - Dragging items into items in contract.
+
+    Object setOwner(Object o, Method method, Object[] args) throws InvocationTargetException, IllegalAccessException {
         Item item = (Item)o;
         // TODO - What about sub-sub-items?
         Item contract = item.getParentOrNull();
@@ -268,7 +271,7 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
         return method.invoke(o, args);
     }
 
-    private Object removeCarriedWeight(Object o, Method method, Object[] args) throws InvocationTargetException, IllegalAccessException {
+    Object removeCarriedWeight(Object o, Method method, Object[] args) throws InvocationTargetException, IllegalAccessException {
         if (blockedChangeCarryWeight(o, args))
             return true;
         return method.invoke(o, args);

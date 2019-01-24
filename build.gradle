@@ -34,3 +34,17 @@ jar {
     includeEmptyDirs false
     archiveName $shortName + '.jar'
 }
+
+task cleanup() {
+    delete fileTree(".") {
+        include "trader*.log"
+    }
+}
+
+test {
+    useJUnitPlatform()
+
+    doLast {
+        cleanup
+    }
+}
