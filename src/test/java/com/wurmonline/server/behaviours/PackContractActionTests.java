@@ -482,7 +482,8 @@ class PackContractActionTests extends ActionBehaviourTest {
         Village village = setUpVillage();
         village.getRoleFor(creature).setMayPickup(false);
         village.getRoleFor(creature).setMayPickupPlanted(false);
-        itemToPack.setPlanted(true);
+        ItemBehaviour.signManipulation = false;
+        itemToPack.setIsPlanted(true);
         itemToPack.noTake = true;
         testPackingBlocked("not have permission");
 
@@ -492,7 +493,9 @@ class PackContractActionTests extends ActionBehaviourTest {
     void testNotBlockIfDoesHaveVillagePermissionToPickupPlanted() {
         Village village = setUpVillage();
         village.getRoleFor(creature).setMayPickupPlanted(true);
-        itemToPack.setPlanted(true);
+        itemToPack.setIsPlanted(true);
+        ItemBehaviour.signManipulation = true;
+        itemToPack.lastOwner = creature.getWurmId();
         itemToPack.noTake = true;
         testPackingNotBlocked();
     }
@@ -557,6 +560,22 @@ class PackContractActionTests extends ActionBehaviourTest {
         testPackingBlocked("special");
     }
 
+    @Test
+    void testCannotPackItemsPlantedByOther() {
+        ItemBehaviour.signManipulation = false;
+        itemToPack.setIsPlanted(true);
+        itemToPack.lastOwner = creature.getWurmId() + 1;
+        testPackingBlocked("planted by");
+    }
+
+    @Test
+    void testCanPackItemsPlantedByPacker() {
+        ItemBehaviour.signManipulation = true;
+        itemToPack.setIsPlanted(true);
+        itemToPack.lastOwner = creature.getWurmId();
+        testPackingNotBlocked();
+    }
+
     // actuallyTake - Not tested directly.
 
     @Test
@@ -577,5 +596,18 @@ class PackContractActionTests extends ActionBehaviourTest {
         mod.action(action, creature, pile, mod.getActionId(), 0);
 
         assertNull(creature.getDraggedItem());
+    }
+
+    @Test
+    void testPlantedItemNoLongerPlantedWhenPacked() {
+        ItemBehaviour.signManipulation = true;
+        itemToPack.setIsPlanted(true);
+        itemToPack.setTemplateId(ItemList.forge);
+
+        assert itemToPack.isPlanted();
+
+        mod.action(action, creature, itemToPack, mod.getActionId(), 0);
+
+        assertFalse(itemToPack.isPlanted());
     }
 }

@@ -54,6 +54,10 @@ public class PackResult {
         return new PackResult(false, "You cannot pack bulk items.");
     }
 
+    public static PackResult TARGET_PLANTED_BY_OTHER() {
+        return new PackResult(false, "You cannot take that as it was planted by somebody else.");
+    }
+
     public static PackResult TARGET_IN_USE(String itemName) {
         return new PackResult(false, "You cannot take the %s as it is in use.", itemName);
     }

@@ -41,7 +41,7 @@ public class PackContractAction implements ModAction, BehaviourProvider, ActionP
                       ActionTypes.ACTION_TYPE_ALWAYS_USE_ACTIVE_ITEM,
                       ActionTypes.ACTION_TYPE_QUICK,
                       ActionTypes.ACTION_TYPE_NONSTACKABLE
-                }).range(4).build();
+                }).range(2).build();
 
         ModActions.registerAction(actionEntry);
     }
@@ -173,6 +173,9 @@ public class PackContractAction implements ModAction, BehaviourProvider, ActionP
                         return PackResult.NEEDS_TO_STEAL(target.getName());
                     }
 
+                    if (target.isPlanted() && !ItemBehaviour.isSignManipulationOk(target, performer, Actions.TAKE))
+                        return PackResult.TARGET_PLANTED_BY_OTHER();
+
                     return PackResult.SUCCESS();
                 }
             } catch (NoSuchZoneException var22) {
@@ -204,7 +207,7 @@ public class PackContractAction implements ModAction, BehaviourProvider, ActionP
             MethodsItems.stopDragging(performer, target);
         }
 
-        if (target.isPlanted() && (target.isSign() || target.isStreetLamp() || target.isFlag() || target.isBulkContainer() || target.getTemplateId() == 742)) {
+        if (target.isPlanted()) {
             target.setIsPlanted(false);
             if (target.isAbility()) {
                 target.hatching = false;

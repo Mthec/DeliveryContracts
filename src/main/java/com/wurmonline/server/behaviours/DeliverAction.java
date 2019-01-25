@@ -19,7 +19,6 @@ public class DeliverAction implements ModAction, BehaviourProvider, ActionPerfor
     private static final Logger logger = Logger.getLogger(DeliverAction.class.getName());
     private final short actionId;
     private final ActionEntry actionEntry;
-    private final short dropAsPileId = (short)638;
 
     public DeliverAction() {
         actionId = (short)ModActions.getNextActionId();
@@ -28,7 +27,7 @@ public class DeliverAction implements ModAction, BehaviourProvider, ActionPerfor
                 new int[] {
                       ActionTypes.ACTION_TYPE_ALWAYS_USE_ACTIVE_ITEM,
                       ActionTypes.ACTION_TYPE_QUICK
-                }).range(4).build();
+                }).range(2).build();
 
         ModActions.registerAction(actionEntry);
     }
@@ -66,7 +65,7 @@ public class DeliverAction implements ModAction, BehaviourProvider, ActionPerfor
                     Item[] items = source.getItemsAsArray();
                     DeliveryContractsMod.addWeightToBlock(performer, Arrays.stream(items).mapToInt(Item::getWeightGrams).sum());
                     ItemBehaviour b = (ItemBehaviour)Behaviours.getInstance().getBehaviour(BehaviourList.itemBehaviour);
-                    b.action(null, performer, items, dropAsPileId, 0);
+                    b.action(null, performer, items, Actions.DROP_AS_PILE, 0);
 
                     if (source.getItemCount() == items.length) {
                         // Message sent via ItemBehaviour.

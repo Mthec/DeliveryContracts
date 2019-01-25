@@ -31,6 +31,7 @@ public class ActionBehaviourTest {
         t.set(null, contractTemplateId);
 
         Blocking.blocked = false;
+        ItemBehaviour.signManipulation = false;
         Creatures.reset();
         Items.reset();
         Vehicles.reset();
@@ -51,7 +52,7 @@ public class ActionBehaviourTest {
         otherItem.setName("lump, gold");
         pile.insertItem(otherItem);
         waystone = new Item(ItemList.waystone);
-        waystone.setPlanted(true);
+        waystone.setIsPlanted(true);
         villageToken = new Item(ItemList.villageToken);
         action = new Action(contract.getWurmId());
 

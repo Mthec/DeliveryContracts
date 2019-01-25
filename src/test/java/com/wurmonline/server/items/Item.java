@@ -216,12 +216,16 @@ public class Item {
         return ownerId;
     }
 
-    public void setPlanted(boolean planted) {
+    public void setIsPlanted(boolean planted) {
         this.planted = planted;
     }
 
     public boolean isPlanted() {
         return planted;
+    }
+
+    public boolean isAbility() {
+        return false;
     }
 
     public boolean isInventory() {
@@ -469,7 +473,7 @@ public class Item {
         return 0;
     }
 
-    // TODO - Do I need to test these options as well?
+    // TODO - Do I need to test these options as well?  Happens in Wurm code so should be okay without.
     public boolean isSurfaceOnly() {
         return false;
     }
