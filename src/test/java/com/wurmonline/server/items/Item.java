@@ -293,6 +293,8 @@ public class Item {
     }
 
     public int getFullWeight() {
+        if (templateId == DeliveryContractsMod.getTemplateId())
+            return 0;
         return weight + items.stream().mapToInt(Item::getWeightGrams).sum();
     }
 

@@ -595,7 +595,7 @@ class DeliveryContractsModTests {
         Item contract = new Item(DeliveryContractsMod.getTemplateId());
 
         DeliveryContractsMod deliveryContractsMod = new DeliveryContractsMod();
-        InvocationHandler handler = deliveryContractsMod::getFullweight;
+        InvocationHandler handler = deliveryContractsMod::getFullWeight;
         Method method = mock(Method.class);
         Object[] args = new Object[0];
 
@@ -608,7 +608,7 @@ class DeliveryContractsModTests {
         Item contract = new Item(DeliveryContractsMod.getTemplateId() + 1);
 
         DeliveryContractsMod deliveryContractsMod = new DeliveryContractsMod();
-        InvocationHandler handler = deliveryContractsMod::getFullweight;
+        InvocationHandler handler = deliveryContractsMod::getFullWeight;
         Method method = mock(Method.class);
         Object[] args = new Object[0];
 

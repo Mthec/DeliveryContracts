@@ -227,9 +227,9 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
 
         // Override to prevent blocking inserting items into inventory due to weight.
         manager.registerHook("com.wurmonline.server.items.Item",
-                "getFullweight",
+                "getFullWeight",
                 "()I",
-                () -> this::getFullweight);
+                () -> this::getFullWeight);
 
         try {
             manager.getClassPool().getCtClass("com.wurmonline.server.items.BuyerTradingWindow");
@@ -361,7 +361,7 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
         return method.invoke(o, args);
     }
 
-    Object getFullweight(Object o, Method method, Object[] args) throws InvocationTargetException, IllegalAccessException {
+    Object getFullWeight(Object o, Method method, Object[] args) throws InvocationTargetException, IllegalAccessException {
         if (((Item)o).getTemplateId() == templateId)
             return 0;
         return method.invoke(o, args);
