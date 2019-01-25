@@ -40,6 +40,7 @@ public class PackContractAction implements ModAction, BehaviourProvider, ActionP
                 new int[] {
                       ActionTypes.ACTION_TYPE_ALWAYS_USE_ACTIVE_ITEM,
                       ActionTypes.ACTION_TYPE_QUICK,
+                      ActionTypes.ACTION_TYPE_NONSTACKABLE
                 }).range(4).build();
 
         ModActions.registerAction(actionEntry);
@@ -256,87 +257,100 @@ public class PackContractAction implements ModAction, BehaviourProvider, ActionP
     @Override
     public boolean action(Action action, Creature performer, Item target, short num, float counter) {
         if (num == actionId) {
+            Item source;
             try {
-                Item source = Items.getItem(action.getSubjectId());
-                if (source.getItemCount() == 0) {
-                    StringBuilder sb = new StringBuilder();
-                    // TODO - Incorrect.  Need name from first item instead of possible pile?
-                    sb.append(getFullName(target)).append(" (");
-
-                    Item[] toPack = new Item[0];
-                    if (target.getOwnerId() == -10 && target.getTemplateId() != ItemList.itemPile) {
-                        toPack = new Item[] {target};
-                    } else if (target.getTemplateId() == ItemList.itemPile) {
-                        toPack = target.getItemsAsArray();
-                    } else {
-                        // Inventory groups by something similar to getFullName.
-                        String targetName = getFullName(target);
-                        Item parent = target.getParentOrNull();
-                        List<Item> items = new ArrayList<>();
-                        if (parent != null) {
-                            for (Item item : parent.getItems()) {
-                                if (getFullName(item).equals(targetName)) {
-                                    items.add(item);
-                                }
+                source = Items.getItem(action.getSubjectId());
+            } catch (NoSuchItemException e) {
+                performer.getCommunicator().sendNormalServerMessage("The spirits fly around in circles looking confused.");
+                logger.warning("Could not get contract item (" + action.getSubjectId() + ") for some reason.  Possible explanation follows:");
+                e.printStackTrace();
+                return true;
+            }
+            if (source.getItemCount() == 0) {
+                Item[] toPack = new Item[0];
+                if (target.getTemplateId() == ItemList.itemPile) {
+                    toPack = target.getItemsAsArray();
+                } else if (target.getParentOrNull() == null) {
+                    toPack = new Item[] {target};
+                } else {
+                    // Inventory groups by something similar to getFullName.
+                    String targetName = getFullName(target);
+                    Item parent = target.getParentOrNull();
+                    List<Item> items = new ArrayList<>();
+                    if (parent != null) {
+                        for (Item item : parent.getItems()) {
+                            if (getFullName(item).equals(targetName)) {
+                                items.add(item);
                             }
-
-                            toPack = items.toArray(new Item[0]);
                         }
+
+                        toPack = items.toArray(new Item[0]);
                     }
-                    if (toPack.length > 0) {
-                        if (toPack.length > 99) {
-                            performer.getCommunicator().sendNormalServerMessage("It would not be possible to unpack that many items at the destination.");
+                }
+                if (toPack.length > 0) {
+                    if (toPack.length > 99) {
+                        performer.getCommunicator().sendNormalServerMessage("It would not be possible to unpack that many items at the destination.");
+                        return true;
+                    }
+
+                    for (Item item : toPack) {
+                        PackResult result = checkTake(performer, item);
+                        if (!result.wasSuccessful()) {
+                            result.sendToPerformer(performer);
                             return true;
                         }
+                    }
 
-                        for (Item item : toPack) {
-                            PackResult result = checkTake(performer, item);
-                            if (!result.wasSuccessful()) {
-                                result.sendToPerformer(performer);
-                                return true;
-                            }
+                    boolean errorWhenTaking = false;
+
+                    boolean mixedItems = false;
+                    int itemCount = 0;
+                    float totalQL = 0;
+                    float allSameQL = toPack[0].getQualityLevel();
+                    for (Item item : toPack) {
+                        try {
+                            actuallyTake(performer, item, source);
+                        } catch (NoSuchItemException | NoSuchZoneException e) {
+                            errorWhenTaking = true;
+                            e.printStackTrace();
+                            continue;
                         }
 
-                        int itemCount = 0;
-                        float totalQL = 0;
-                        float allSameQL = toPack[0].getQualityLevel();
-                        for (Item item : toPack) {
-                            ++itemCount;
-                            totalQL += item.getQualityLevel();
-                            if (allSameQL != -1 && item.getQualityLevel() != allSameQL)
-                                allSameQL = -1;
+                        ++itemCount;
+                        totalQL += item.getQualityLevel();
+                        if (allSameQL != -1 && item.getQualityLevel() != allSameQL)
+                            allSameQL = -1;
 
-                            try {
-                                actuallyTake(performer, item, source);
-                            } catch (NoSuchItemException | NoSuchZoneException e) {
-                                // TODO - Set error boolean?
-                                e.printStackTrace();
-                            }
-                        }
+                        if (!mixedItems && item.getTemplateId() != toPack[0].getTemplateId())
+                            mixedItems = true;
+                    }
 
+                    StringBuilder description = new StringBuilder();
+
+                    if (mixedItems) {
+                        description.append("mixed items x ").append(itemCount);
+                    } else {
+                        description.append(getFullName(toPack[0])).append(" (");
                         if (itemCount == 1) {
-                            sb.append(totalQL).append("ql)");
+                            description.append(totalQL).append("ql)");
                         } else {
                             if (allSameQL == -1)
-                                sb.append("avg. ");
-                            sb.append(totalQL / itemCount).append("ql) x ").append(itemCount);
+                                description.append("avg. ");
+                            description.append(totalQL / itemCount).append("ql) x ").append(itemCount);
                         }
                     }
 
                     source.setName("delivery note");
-                    source.setDescription(sb.toString());
+                    source.setDescription(description.toString());
 
                     boolean isManyItems = toPack.length > 1;
                     performer.getCommunicator().sendNormalServerMessage(String.format("The spirits take the %s with a promise to return %s to the bearer of this note.",
                             (isManyItems ? "items" : "item"),
                             (isManyItems ? "them" : "it")));
-                    return true;
+                    if (errorWhenTaking)
+                        // TODO - Better message?
+                        performer.getCommunicator().sendNormalServerMessage("An error occurred when packing, some of the items may not have been packed.");
                 }
-            } catch (NoSuchItemException e) {
-                performer.getCommunicator().sendNormalServerMessage("The spirits fly around in circles looking confused.");
-                logger.warning("An error occurred when trying to pack a delivery contract.  Possible explanation follows:");
-                e.printStackTrace();
-                return true;
             }
             return true;
         }

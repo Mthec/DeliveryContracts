@@ -51,7 +51,7 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
 
     public static void removeWeightToBlock(Creature creature, int weight) {
         weightBlocker.merge(creature, -weight, Integer::sum);
-        if (weightBlocker.get(creature) == 0)
+        if (weightBlocker.get(creature) <= 0)
             weightBlocker.remove(creature);
     }
 
@@ -225,6 +225,12 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
                 "(Lcom/wurmonline/server/creatures/Creature;Lcom/wurmonline/server/items/Item;Lcom/wurmonline/server/items/Item;)Ljava/util/List;",
                 () -> this::getBehavioursFor);
 
+        // Override to prevent blocking inserting items into inventory due to weight.
+        manager.registerHook("com.wurmonline.server.items.Item",
+                "getFullweight",
+                "()I",
+                () -> this::getFullweight);
+
         try {
             manager.getClassPool().getCtClass("com.wurmonline.server.items.BuyerTradingWindow");
             manager.registerHook("com.wurmonline.server.items.BuyerTradingWindow",
@@ -242,6 +248,7 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
 
         return method.invoke(o, args);
     }
+
     private boolean isInContract(Item item) {
         Item maybeContract = item.getParentOrNull();
 
@@ -257,7 +264,6 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
 
         return maybeContract != null && maybeContract.getTemplateId() == templateId;
     }
-
     Object mayAddFromInventory(Object o, Method method, Object[] args) throws InvocationTargetException, IllegalAccessException {
         if (isInContract((Item)args[1]))
             return false;
@@ -355,7 +361,9 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
         return method.invoke(o, args);
     }
 
-    // TODO - Item stack in pile/container instead of just inventory.
-    // TODO - getFullweight
-    // Needed for adding items to inventory when contract is too heavy.
+    Object getFullweight(Object o, Method method, Object[] args) throws InvocationTargetException, IllegalAccessException {
+        if (((Item)o).getTemplateId() == templateId)
+            return 0;
+        return method.invoke(o, args);
+    }
 }

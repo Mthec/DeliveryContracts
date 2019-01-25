@@ -1,10 +1,11 @@
 package com.wurmonline.server.zones;
 
+import com.wurmonline.server.items.Item;
 import com.wurmonline.server.structures.Structure;
 
 public class VolaTile {
 
-    private final int numberOfItems;
+    private int numberOfItems;
     private int numberOfDecorations;
 
     public VolaTile(int numberOfItems) {
@@ -25,5 +26,9 @@ public class VolaTile {
 
     public int getNumberOfDecorations(int dropFloorLevel) {
         return numberOfDecorations;
+    }
+
+    public void addItem(Item item) {
+        numberOfItems += 1;
     }
 }

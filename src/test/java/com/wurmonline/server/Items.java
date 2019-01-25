@@ -11,10 +11,12 @@ public class Items {
     private static Map<Long, Item> items = new HashMap<>();
     private static Set<Item> destroyedItems = new HashSet<>();
     private static Map<Item, Creature> draggedItems = new HashMap<>();
+    private static Set<Item> fakeErrors = new HashSet<>();
 
     public static void reset() {
         items = new HashMap<>();
         destroyedItems = new HashSet<>();
+        fakeErrors = new HashSet<>();
     }
 
     public static void addItems(Item... allItems) {
@@ -25,7 +27,14 @@ public class Items {
     public static Item getItem(long wurmId) throws NoSuchItemException {
         if (!items.containsKey(wurmId))
             throw new NoSuchItemException("");
-        return items.get(wurmId);
+
+        Item toReturn = items.get(wurmId);
+        if (fakeErrors.contains(toReturn)) {
+            items.remove(wurmId);
+            fakeErrors.remove(toReturn);
+        }
+
+        return toReturn;
     }
 
     public static Optional<Item> getItemOptional(long wurmId) {
@@ -67,5 +76,9 @@ public class Items {
 
     public static boolean isItemDragged(Item item) {
         return item.isDragged;
+    }
+
+    public static void fakeError(Item item) {
+        fakeErrors.add(item);
     }
 }

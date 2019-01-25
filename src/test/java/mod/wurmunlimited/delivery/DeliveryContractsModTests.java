@@ -589,4 +589,30 @@ class DeliveryContractsModTests {
         assertEquals(0, entries.size());
         verify(method, never()).invoke(itemInContract, args);
     }
+
+    @Test
+    void testGetFullWeightReturnsZeroForContract() throws Throwable {
+        Item contract = new Item(DeliveryContractsMod.getTemplateId());
+
+        DeliveryContractsMod deliveryContractsMod = new DeliveryContractsMod();
+        InvocationHandler handler = deliveryContractsMod::getFullweight;
+        Method method = mock(Method.class);
+        Object[] args = new Object[0];
+
+        assertEquals(0, handler.invoke(contract, method, args));
+        verify(method, never()).invoke(contract, args);
+    }
+
+    @Test
+    void testGetFullWeightReturnsNormalForNotContract() throws Throwable {
+        Item contract = new Item(DeliveryContractsMod.getTemplateId() + 1);
+
+        DeliveryContractsMod deliveryContractsMod = new DeliveryContractsMod();
+        InvocationHandler handler = deliveryContractsMod::getFullweight;
+        Method method = mock(Method.class);
+        Object[] args = new Object[0];
+
+        assertNull(handler.invoke(contract, method, args));
+        verify(method, times(1)).invoke(contract, args);
+    }
 }

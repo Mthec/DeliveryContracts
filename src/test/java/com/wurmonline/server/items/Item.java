@@ -182,6 +182,7 @@ public class Item {
         if (parent != null)
             parent.removeItem(this);
         inFrontOf = creature;
+        creature.currentTile.addItem(this);
     }
 
     public boolean isInFrontOf(Creature creature) {
@@ -411,6 +412,12 @@ public class Item {
                 item = i;
                 break;
             }
+        }
+
+        if (item != null) {
+            item.setOwnerId(-10L);
+            removeItem(item);
+            item.parent = null;
         }
 
         return item;

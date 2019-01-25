@@ -42,11 +42,14 @@ public class ActionBehaviourTest {
         creature.currentTile = new VolaTile(0);
         contract = new Item(contractTemplateId);
         contract.hollow = true;
-        contract.setName("Contract");
+        contract.setName("contract");
         itemToPack = new Item(ItemList.ironBar);
+        itemToPack.setName("lump, iron");
         pile = new Item(ItemList.itemPile);
         pile.insertItem(itemToPack);
-        pile.insertItem(new Item(ItemList.ironBar));
+        Item otherItem = new Item(ItemList.goldBar);
+        otherItem.setName("lump, gold");
+        pile.insertItem(otherItem);
         waystone = new Item(ItemList.waystone);
         waystone.setPlanted(true);
         villageToken = new Item(ItemList.villageToken);

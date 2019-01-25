@@ -71,6 +71,7 @@ class PackContractActionTests extends ActionBehaviourTest {
 
     @Test
     void testPlayerMessageForSingleItem() {
+        pile.dropItem(itemToPack.getWurmId(), true);
         mod.action(action, creature, itemToPack, mod.getActionId(), 0);
 
         assertTrue(creature.getCommunicator().getLastMessage().contains("spirits take"));
@@ -129,9 +130,9 @@ class PackContractActionTests extends ActionBehaviourTest {
         for (int i = 0; i < num; i++) {
             Item newItem = new Item(ItemList.ironBar);
             newItem.setQualityLevel(ql);
+            newItem.setName("Test");
             pile.insertItem(newItem);
         }
-        pile.setName("Test");
         mod.action(action, creature, pile, mod.getActionId(), 0);
 
         assertEquals("Test (" + ql + "ql) x " + num, contract.getDescription());
@@ -145,13 +146,42 @@ class PackContractActionTests extends ActionBehaviourTest {
         for (int i = -num; i < num; i++) {
             Item newItem = new Item(ItemList.ironBar);
             newItem.setQualityLevel(ql + i);
+            newItem.setName("Test");
             pile.insertItem(newItem);
         }
-        pile.setName("Test");
         Item[] items =  pile.getItemsAsArray();
         mod.action(action, creature, pile, mod.getActionId(), 0);
 
         assertEquals("Test (avg. " + (float)Arrays.stream(items).mapToDouble(Item::getQualityLevel).average().orElseThrow(RuntimeException::new) + "ql) x " + num * 2, contract.getDescription());
+    }
+
+    @Test
+    void testDescriptionNotNamedAfterPile() {
+        pile.setName("Pile of items");
+
+        mod.action(action, creature, pile, mod.getActionId(), 0);
+        assertNotEquals("", contract.getDescription());
+        assertFalse(contract.getDescription().startsWith("Pile"));
+    }
+
+    @Test
+    void testDescriptionOfDifferentItems() {
+        pile.setName("Pile of items");
+        Item[] items = pile.getItemsAsArray();
+        items[0].setName("salt");
+        items[1].setName("sugar");
+
+        mod.action(action, creature, pile, mod.getActionId(), 0);
+        assertEquals("mixed items x " + items.length, contract.getDescription());
+    }
+
+    @Test
+    void testDescriptionItemCountDoesNotIncludeErrorItems() {
+        Item[] items = pile.getItemsAsArray();
+        Items.fakeError(items[0]);
+
+        mod.action(action, creature, pile, mod.getActionId(), 0);
+        assertEquals("mixed items x " + items.length, contract.getDescription());
     }
 
     @Test
@@ -210,6 +240,31 @@ class PackContractActionTests extends ActionBehaviourTest {
         assertEquals(number, inventory.getItemCount());
         assertTrue(contract.getItems().stream().allMatch(item -> item.getMaterial() == ItemMaterials.MATERIAL_GOLD));
         assertTrue(inventory.getItems().stream().allMatch(item -> item.getMaterial() == ItemMaterials.MATERIAL_IRON));
+    }
+
+    @Test
+    void testPackItemStackInsidePile() {
+        pile.getItems().clear();
+
+        Item notLump = new Item(ItemList.acorn);
+        notLump.setName("acorn");
+        pile.insertItem(notLump);
+
+        for (int i = 0; i < 10; i++) {
+            Item item = new Item(ItemList.ironBar);
+            item.setName("lump");
+            pile.insertItem(item);
+        }
+
+        Item lump = new Item(ItemList.ironBar);
+        lump.setName("lump");
+        pile.insertItem(lump);
+
+        assertTrue(mod.action(action, creature, lump, mod.getActionId(), 0));
+        assertEquals(11, contract.getItemCount());
+        assertFalse(contract.contains(notLump));
+        assertEquals(1, pile.getItemCount());
+        assertTrue(pile.contains(notLump));
     }
 
     // checkTake

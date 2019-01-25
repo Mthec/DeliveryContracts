@@ -149,4 +149,18 @@ class DeliverActionTests extends ActionBehaviourTest {
         mod.action(action, creature, waystone, mod.getActionId(), 0);
         assertTrue(creature.getCommunicator().getLastMessage().contains("items"));
     }
+
+    @Test
+    void testDescriptionUpdatedIfNotAllItemsDelivered() {
+        for (int i = 0; i < 20; i++) {
+            contract.insertItem(new Item(ItemList.dirtPile));
+        }
+        creature.currentTile = new VolaTile(90);
+        assert creature.currentTile.getNumberOfItems(0) + contract.getItemCount() > 100;
+        mod.action(action, creature, waystone, mod.getActionId(), 0);
+
+        assertEquals(10, contract.getItemCount());
+        assertTrue(creature.getCommunicator().getLastMessage().contains("some of the items"));
+        assertEquals("remaining items x 10", contract.getDescription());
+    }
 }

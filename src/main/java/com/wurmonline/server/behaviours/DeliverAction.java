@@ -63,45 +63,29 @@ public class DeliverAction implements ModAction, BehaviourProvider, ActionPerfor
             try {
                 Item source = Items.getItem(action.getSubjectId());
                 if (source.getItemCount() > 0) {
-
-//                    if (performer.currentTile.getNumberOfItems(performer.getFloorLevel(true)) + source.getItemCount() > 99) {
-//                        performer.getCommunicator().sendNormalServerMessage("The area is too littered with items already.");
-//                    } else {
                     Item[] items = source.getItemsAsArray();
                     DeliveryContractsMod.addWeightToBlock(performer, Arrays.stream(items).mapToInt(Item::getWeightGrams).sum());
                     ItemBehaviour b = (ItemBehaviour)Behaviours.getInstance().getBehaviour(BehaviourList.itemBehaviour);
                     b.action(null, performer, items, dropAsPileId, 0);
-//                        for (Item item : source.getItems().toArray(new Item[0])) {
-//                            DeliveryContractsMod.addWeightToBlock(performer, item.getWeightGrams());
-//                            // TODO - Onepertile
-//                            // TODO - Fourpertile
-//                            // TODO - Already dropped items not added to volatile items layer for some reason.
-//
-//
-////                            if (MethodsItems.drop(performer, item, false).length == 0) {
-////                                logger.warning("Failure");
-////                            }
-//                            //item.putItemInfrontof(performer);
-//                        }
-                        //Items.destroyItem(source.getWurmId());
+
                     if (source.getItemCount() == items.length) {
+                        // Message sent via ItemBehaviour.
                         return true;
                     } else if (source.getItemCount() == 0) {
                         source.setName("delivery contract");
                         source.setDescription("");
                         performer.getCommunicator().sendNormalServerMessage("The spirits place the item" + (items.length == 1 ? "" : "s") + " in front of you.");
                     } else {
+                        source.setDescription("remaining items x " + source.getItemCount());
                         DeliveryContractsMod.removeWeightToBlock(performer, source.getItems().stream().mapToInt(Item::getWeightGrams).sum());
-                        // TODO - "Some of the item(s)".
-                        performer.getCommunicator().sendNormalServerMessage("The spirits place the item" + (source.getItemCount() == 1 ? "" : "s") + " in front of you.");
+                        performer.getCommunicator().sendNormalServerMessage("The spirits place some of the items in front of you.");
                     }
 
                     return true;
                 }
             } catch (NoSuchItemException | NoSuchBehaviourException e) {
                 performer.getCommunicator().sendNormalServerMessage("The spirits fly around in circles looking confused.");
-                // TODO - Change.  re behaviour.
-                logger.warning("An error occurred when unpacking " + action.getSubjectId() + ".  Some items may not have been placed.");
+                logger.warning("An error occurred when unpacking " + action.getSubjectId() + ":");
                 e.printStackTrace();
                 return true;
             }
