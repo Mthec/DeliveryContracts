@@ -43,7 +43,7 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
     private int contractPrice = MonetaryConstants.COIN_COPPER * 10;
     private boolean updateTraders = false;
     private boolean contractsOnTraders = true;
-    private static Map<Creature, Integer> weightBlocker = new HashMap<>();
+    private static final Map<Creature, Integer> weightBlocker = new HashMap<>();
 
     // The following would be nice, but would require big workaround that is arguably not worth the effort for marginal benefit.
     // Get Price after sale from trader is modified from full price.  (Unnecessary ItemBehaviour.action override with edge cases.)

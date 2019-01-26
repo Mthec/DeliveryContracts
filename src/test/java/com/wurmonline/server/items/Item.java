@@ -26,7 +26,7 @@ public class Item {
     private boolean planted;
     private Item parent = null;
     private int weight = 0;
-    private Set<Creature> watchers;
+    private Set<Creature> watchers = new HashSet<>();
     public boolean mailed;
     private long bridgeId = -10;
     public TradingWindow tradeWindow;
@@ -125,7 +125,7 @@ public class Item {
     public long getTopParent() {
         Item toReturn = getTopParentOrNull();
         if (toReturn == null)
-            return -10;
+            return id;
         return toReturn.getWurmId();
     }
 
@@ -179,8 +179,10 @@ public class Item {
 
     public void putItemInfrontof(Creature creature) {
         Item parent = getParentOrNull();
-        if (parent != null)
+        if (parent != null) {
             parent.removeItem(this);
+            this.parent = null;
+        }
         inFrontOf = creature;
         creature.currentTile.addItem(this);
     }
@@ -306,6 +308,14 @@ public class Item {
         if (watchers == null)
             throw new NoSuchCreatureException("Watchers is null.");
         return watchers.toArray(new Creature[0]);
+    }
+
+    public void addWatcher(long inventoryWindow, Creature creature) {
+        watchers.add(creature);
+    }
+
+    public void removeWatcher(Creature creature) {
+        watchers.remove(creature);
     }
 
     public boolean isBusy() {

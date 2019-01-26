@@ -32,7 +32,7 @@ public class Creature {
 
     public Creature() {
         id = nextWurmId++;
-        communicator = new Communicator();
+        communicator = new Communicator(this);
         inventory = new Item(ItemList.inventory);
         inventory.setOwnerId(id);
         Creatures.getInstance().addCreature(this);

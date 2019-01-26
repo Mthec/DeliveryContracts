@@ -1,10 +1,13 @@
 package com.wurmonline.server.behaviours;
 
 import com.wurmonline.server.Items;
+import com.wurmonline.server.creatures.Creature;
+import com.wurmonline.server.creatures.NoSuchCreatureException;
 import com.wurmonline.server.items.Item;
 import com.wurmonline.server.items.ItemList;
 import com.wurmonline.server.structures.Blocking;
 import com.wurmonline.server.villages.Village;
+import com.wurmonline.server.zones.VolaTile;
 import com.wurmonline.server.zones.Zone;
 import com.wurmonline.server.zones.Zones;
 import com.wurmonline.shared.constants.ItemMaterials;
@@ -609,5 +612,17 @@ class PackContractActionTests extends ActionBehaviourTest {
         mod.action(action, creature, itemToPack, mod.getActionId(), 0);
 
         assertFalse(itemToPack.isPlanted());
+    }
+
+    @Test
+    void testWatchersAreUpdated() throws NoSuchCreatureException {
+        Creature watcher = new Creature();
+        watcher.currentTile = new VolaTile(0);
+        itemToPack.putItemInfrontof(watcher);
+        itemToPack.addWatcher(0, watcher);
+
+        mod.action(action, creature, itemToPack, mod.getActionId(), 0);
+
+        assertEquals(0, itemToPack.getWatchers().length);
     }
 }
