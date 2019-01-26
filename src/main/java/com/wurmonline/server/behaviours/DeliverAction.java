@@ -27,7 +27,7 @@ public class DeliverAction implements ModAction, BehaviourProvider, ActionPerfor
                 new int[] {
                       ActionTypes.ACTION_TYPE_ALWAYS_USE_ACTIVE_ITEM,
                       ActionTypes.ACTION_TYPE_QUICK
-                }).range(2).build();
+                }).range(4).build();
 
         ModActions.registerAction(actionEntry);
     }

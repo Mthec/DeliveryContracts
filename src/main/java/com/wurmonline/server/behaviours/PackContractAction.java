@@ -41,7 +41,7 @@ public class PackContractAction implements ModAction, BehaviourProvider, ActionP
                       ActionTypes.ACTION_TYPE_ALWAYS_USE_ACTIVE_ITEM,
                       ActionTypes.ACTION_TYPE_QUICK,
                       ActionTypes.ACTION_TYPE_NONSTACKABLE
-                }).range(2).build();
+                }).range(4).build();
 
         ModActions.registerAction(actionEntry);
     }
