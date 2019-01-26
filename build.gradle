@@ -3,7 +3,7 @@ plugins {
 }
 
 group 'mod.wurmunlimited.delivery'
-version '0.01'
+version '0.5-beta'
 
 sourceCompatibility = 1.8
 def $shortName = 'deliverycontracts'
@@ -33,7 +33,11 @@ jar {
 
     includeEmptyDirs false
     archiveName $shortName + '.jar'
-}
+
+    manifest {
+        attributes("Implementation-Version": version)
+    }
+}.dependsOn(test)
 
 task cleanup() {
     delete fileTree(".") {
