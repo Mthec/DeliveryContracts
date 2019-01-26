@@ -99,12 +99,15 @@ public class PackContractAction implements ModAction, BehaviourProvider, ActionP
                 return PackResult.TARGET_CANNOT_BE_DROPPED(target.getName());
             }
 
-            if (target.isTent()) {
+            if (target.isTent() || target.isCart()) {
                 Vehicle vehicle = Vehicles.getVehicle(target);
                 if (vehicle != null && vehicle.getDraggers() != null && vehicle.getDraggers().size() > 0) {
                     return PackResult.HITCHED();
                 }
             }
+
+            if (target.isBoat())
+                return PackResult.TARGET_CANNOT_BE_DROPPED(target.getName());
 
             try {
                 BlockingResult result = Blocking.getBlockerBetween(performer, target, 4);

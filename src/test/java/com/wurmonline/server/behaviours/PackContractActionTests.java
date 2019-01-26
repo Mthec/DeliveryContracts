@@ -439,6 +439,18 @@ class PackContractActionTests extends ActionBehaviourTest {
     }
 
     @Test
+    void testCartsArePackable() {
+        itemToPack.setTemplateId(ItemList.cartLarge);
+        testPackingNotBlocked();
+    }
+
+    @Test
+    void testBoatsNotPackable() {
+        itemToPack.setTemplateId(ItemList.boatRowing);
+        testPackingBlocked("not be delivered");
+    }
+
+    @Test
     void testStealingNotAllowed() {
         MethodsItems.isStealing = true;
         testPackingBlocked("steal");

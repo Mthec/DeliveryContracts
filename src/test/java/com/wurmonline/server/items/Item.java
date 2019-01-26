@@ -6,6 +6,7 @@ import com.wurmonline.server.creatures.Creature;
 import com.wurmonline.server.creatures.NoSuchCreatureException;
 import mod.wurmunlimited.delivery.DeliveryContractsMod;
 
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -485,6 +486,25 @@ public class Item {
 
     public void setMailed(boolean isMail) {
         mailed = isMail;
+    }
+
+    public boolean isCart() {
+        return templateId == ItemList.cartLarge || templateId == ItemList.cartSmall;
+    }
+
+    public boolean isBoat() {
+        Set<Integer> boats = new HashSet<>(Arrays.asList(
+                ItemList.boatRowing,
+                ItemList.boatSailing,
+                ItemList.knarr,
+                ItemList.cog,
+                ItemList.caravel
+        ));
+        return boats.contains(templateId);
+    }
+
+    public boolean isMooredBoat() {
+        return isBoat() && getData() != 1L;
     }
 
     // TODO - Do I need to test these options as well?  Happens in Wurm code so should be okay without.
