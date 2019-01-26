@@ -73,8 +73,10 @@ public class DeliverAction implements ModAction, BehaviourProvider, ActionPerfor
                         // Message sent via ItemBehaviour.
                         return true;
                     } else if (source.getItemCount() == 0) {
-                        source.setName("delivery contract");
-                        source.setDescription("");
+                        Items.destroyItem(source.getWurmId());
+                        // For testing.
+//                        source.setName("delivery contract");
+//                        source.setDescription("");
                         performer.getCommunicator().sendNormalServerMessage("The spirits place the item" + (items.length == 1 ? "" : "s") + " in front of you.");
                     } else {
                         source.setDescription("remaining items x " + source.getItemCount());
