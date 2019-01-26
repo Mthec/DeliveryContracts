@@ -233,6 +233,7 @@ public class PackContractAction implements ModAction, BehaviourProvider, ActionP
         contract.insertItem(target, true);
         performer.getCommunicator().sendUpdateInventoryItem(target);
         target.setOnBridge(-10L);
+        target.setMailed(true);
         target.setLastMaintained(WurmCalendar.currentTime);
     }
 

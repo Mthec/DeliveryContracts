@@ -45,6 +45,10 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
     private boolean contractsOnTraders = true;
     private static Map<Creature, Integer> weightBlocker = new HashMap<>();
 
+    // Following would be nice, but would require big workaround that is arguably not worth the effort for marginal benefit.
+    // Get Price after sale from trader is modified from full price.  (Unnecessary ItemBehaviour.action override with edge cases.)
+    // Items showing whilst on merchant to prevent description changes. (Trading system does not accommodate items in items.)
+
     public static void addWeightToBlock(Creature creature, int weight) {
         weightBlocker.merge(creature, weight, Integer::sum);
     }
@@ -167,7 +171,7 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
                 "(Z)Z",
                 () -> this::isEmpty);
 
-        // These two cause problems when trading.  Items will only be accessible through getItems().
+        // These two can cause problems when trading.  Items will only be accessible through getItems() during trade.
         manager.registerHook("com.wurmonline.server.items.Item",
                 "getItemsAsArray",
                 "()[Lcom/wurmonline/server/items/Item;",
@@ -178,6 +182,7 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
                 "(ZZ)[Lcom/wurmonline/server/items/Item;",
                 () -> this::getItemsAsArray);
 
+        // Hide weight of items in contracts from creature speed modifier.
         manager.registerHook("com.wurmonline.server.creatures.Creature",
                 "addCarriedWeight",
                 "(I)V",
@@ -209,6 +214,7 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
                 "(Lcom/wurmonline/server/creatures/Creature;Lcom/wurmonline/server/items/Item;)Z",
                 () -> this::mayAddFromInventory);
 
+        // Full price on Trader, not full price on merchant.
         manager.registerHook("com.wurmonline.server.items.Item",
                 "isFullprice",
                 "()Z",
@@ -229,6 +235,11 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
         manager.registerHook("com.wurmonline.server.items.Item",
                 "getFullWeight",
                 "()I",
+                () -> this::getFullWeight);
+
+        manager.registerHook("com.wurmonline.server.items.Item",
+                "getFullWeight",
+                "(Z)I",
                 () -> this::getFullWeight);
 
         try {
@@ -279,14 +290,17 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
     }
 
     Object setOwner(Object o, Method method, Object[] args) throws InvocationTargetException, IllegalAccessException {
-        Item item = (Item)o;
-        Item contract = item.getParentOrNull();
         try {
-            if (contract != null && contract.getTemplateId() == templateId) {
-                Creature owner;
-                if (args.length == 3)
-                    owner = Server.getInstance().getCreature((long)args[0]);
-                else
+            Item item = (Item)o;
+            if (isInContract(item)) {
+                Creature owner = null;
+                if (args.length == 3) {
+                    try {
+                        owner = Server.getInstance().getCreature((Long)args[0]);
+                    } catch (NoSuchPlayerException | NoSuchCreatureException ignored) {}
+                }
+
+                if (owner == null)
                     owner = Server.getInstance().getCreature(item.getOwnerId());
 
                 weightBlocker.put(owner, item.getWeightGrams());

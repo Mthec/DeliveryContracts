@@ -66,6 +66,8 @@ public class DeliverAction implements ModAction, BehaviourProvider, ActionPerfor
                     DeliveryContractsMod.addWeightToBlock(performer, Arrays.stream(items).mapToInt(Item::getWeightGrams).sum());
                     ItemBehaviour b = (ItemBehaviour)Behaviours.getInstance().getBehaviour(BehaviourList.itemBehaviour);
                     b.action(null, performer, items, Actions.DROP_AS_PILE, 0);
+                    Arrays.stream(items).filter(item -> !source.getItems().contains(item))
+                            .forEach(item -> item.setMailed(false));
 
                     if (source.getItemCount() == items.length) {
                         // Message sent via ItemBehaviour.
