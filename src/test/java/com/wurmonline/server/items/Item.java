@@ -473,6 +473,10 @@ public class Item {
         return 0;
     }
 
+    public void setMailed(boolean isMail) {
+        mailed = isMail;
+    }
+
     // TODO - Do I need to test these options as well?  Happens in Wurm code so should be okay without.
     public boolean isSurfaceOnly() {
         return false;
