@@ -492,9 +492,28 @@ class DeliveryContractsModTests {
             contract.insertItem(item);
         }
 
-        Object[] args = new Object[0];
+        Object[] args = new Object[] { true };
         assertTrue((Boolean)handler.invoke(contract, method, args));
         verify(method, never()).invoke(contract, args);
+    }
+
+    @Test
+    void testIsEmptyReturnsNormalIfContractWhenTradedButArgs0IsFalse() throws Throwable {
+        DeliveryContractsMod deliveryContractsMod = new DeliveryContractsMod();
+        InvocationHandler handler = deliveryContractsMod::isEmpty;
+        Method method = mock(Method.class);
+
+        Item contract = new Item(DeliveryContractsMod.getTemplateId());
+        contract.tradeWindow = mock(TradingWindow.class);
+        int numberOfItems = 25;
+        for (int i = 0; i < numberOfItems; i++) {
+            Item item = new Item(ItemList.dirtPile);
+            contract.insertItem(item);
+        }
+
+        Object[] args = new Object[] { false };
+        assertNull(handler.invoke(contract, method, args));
+        verify(method, times(1)).invoke(contract, args);
     }
 
     @Test
@@ -510,7 +529,7 @@ class DeliveryContractsModTests {
             contract.insertItem(item);
         }
 
-        Object[] args = new Object[0];
+        Object[] args = new Object[] { true };
         assertNull(handler.invoke(contract, method, args));
         verify(method, times(1)).invoke(contract, args);
     }
@@ -529,7 +548,7 @@ class DeliveryContractsModTests {
             contract.insertItem(item);
         }
 
-        Object[] args = new Object[0];
+        Object[] args = new Object[] { true };
         assertNull(handler.invoke(contract, method, args));
         verify(method, times(1)).invoke(contract, args);
     }

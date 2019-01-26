@@ -45,9 +45,8 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
     private boolean contractsOnTraders = true;
     private static Map<Creature, Integer> weightBlocker = new HashMap<>();
 
-    // Following would be nice, but would require big workaround that is arguably not worth the effort for marginal benefit.
+    // The following would be nice, but would require big workaround that is arguably not worth the effort for marginal benefit.
     // Get Price after sale from trader is modified from full price.  (Unnecessary ItemBehaviour.action override with edge cases.)
-    // Items showing whilst on merchant to prevent description changes. (Trading system does not accommodate items in items.)
 
     public static void addWeightToBlock(Creature creature, int weight) {
         weightBlocker.merge(creature, weight, Integer::sum);
@@ -345,7 +344,8 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
     }
 
     Object isEmpty(Object o, Method method, Object[] args) throws InvocationTargetException, IllegalAccessException {
-        if (((Item)o).getTemplateId() == templateId && ((Item)o).isTraded())
+        // Relying on the boolean is a little fragile, but what else to do.
+        if (((Item)o).getTemplateId() == templateId && ((Item)o).isTraded() && (Boolean)args[0])
             return true;
         return method.invoke(o, args);
     }
