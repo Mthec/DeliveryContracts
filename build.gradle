@@ -15,7 +15,7 @@ repositories {
 dependencies {
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.3.1'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.3.1'
-    testImplementation "org.mockito:mockito-inline:2.+"
+    testImplementation 'org.mockito:mockito-inline:2.+'
     implementation fileTree(dir: 'E:/Steam/steamapps/common/Wurm Unlimited/WurmServerLauncher/', includes: ["modlauncher.jar", "javassist.jar", "server.jar"])
 }
 
@@ -35,13 +35,13 @@ jar {
     archiveName $shortName + '.jar'
 
     manifest {
-        attributes("Implementation-Version": version)
+        attributes('Implementation-Version': version)
     }
 }.dependsOn(test)
 
 task cleanup() {
-    delete fileTree(".") {
-        include "trader*.log"
+    delete fileTree('.') {
+        include 'trader*.log'
     }
 }
 
@@ -51,4 +51,13 @@ test {
     doLast {
         cleanup
     }
+}
+
+task zip(type: Zip) {
+    into($shortName) {
+        from jar
+    }
+    from $shortName + '.properties'
+
+    archiveName = $shortName + '.zip'
 }
