@@ -21,12 +21,14 @@ import com.wurmonline.server.items.ItemTypes;
 import com.wurmonline.shared.constants.IconConstants;
 import com.wurmonline.shared.constants.ItemMaterials;
 import javassist.NotFoundException;
+import org.gotti.wurmunlimited.modloader.ReflectionUtil;
 import org.gotti.wurmunlimited.modloader.classhooks.HookManager;
 import org.gotti.wurmunlimited.modloader.interfaces.*;
 import org.gotti.wurmunlimited.modsupport.ItemTemplateBuilder;
 import org.gotti.wurmunlimited.modsupport.actions.ModActions;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -47,6 +49,7 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
 
     // The following would be nice, but would require big workaround that is arguably not worth the effort for marginal benefit.
     // Get Price after sale from trader is modified from full price.  (Unnecessary ItemBehaviour.action override with edge cases.)
+    // TODO - Multiple Pack ups, with sensible item limit.
 
     public static void addWeightToBlock(Creature creature, int weight) {
         weightBlocker.merge(creature, weight, Integer::sum);
@@ -122,6 +125,16 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
     public void onServerStarted() {
         ModActions.registerAction(new PackContractAction());
         ModActions.registerAction(new DeliverAction());
+
+        try {
+            Field field = ReflectionUtil.getField(Class.forName("com.wurmonline.server.creatures.BuyerHandler"), "deliveryContractId");
+            field.setAccessible(true);
+            field.set(null, templateId);
+        } catch (ClassNotFoundException ignored) {
+        } catch (IllegalAccessException | NoSuchFieldException e) {
+            logger.warning("Error setting template id for Buyer Merchant mod, contracts will not be processed by buyers.");
+            e.printStackTrace();
+        }
 
         if (updateTraders) {
             if (contractsOnTraders) {
