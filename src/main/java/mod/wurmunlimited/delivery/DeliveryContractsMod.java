@@ -80,6 +80,17 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
         val = properties.getProperty("contracts_on_traders");
         if (val != null && val.equals("false"))
             contractsOnTraders = false;
+        val = properties.getProperty("max_items");
+        if (val != null && val.length() > 0) {
+            try {
+                int maxItems = Integer.parseInt(val);
+                if (maxItems < 0)
+                    throw new NumberFormatException();
+                PackContractAction.itemCap = maxItems;
+            } catch (NumberFormatException e) {
+                logger.warning("Invalid value for max_items.  Must be a non-negative whole number.  Using default of 1000.");
+            }
+        }
     }
 
     public static int getTemplateId() {

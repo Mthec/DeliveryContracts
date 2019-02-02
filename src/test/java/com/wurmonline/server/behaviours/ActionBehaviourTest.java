@@ -38,6 +38,7 @@ public class ActionBehaviourTest {
         MethodsItems.reset();
         Zones.reset();
         Economy.reset();
+        PackContractAction.itemCap = 1000;
 
         creature = new Creature();
         creature.currentTile = new VolaTile(0);

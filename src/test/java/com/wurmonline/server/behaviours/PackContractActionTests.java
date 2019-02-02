@@ -13,6 +13,7 @@ import com.wurmonline.server.zones.Zones;
 import com.wurmonline.shared.constants.ItemMaterials;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -35,7 +36,7 @@ class PackContractActionTests extends ActionBehaviourTest {
     void testGetBehaviourForAlreadySetContract() {
         contract.insertItem(new Item(ItemList.acorn));
         assert contract.getItemCount() > 0;
-        assertNull(mod.getBehavioursFor(creature, contract, pile));
+        assertNotNull(mod.getBehavioursFor(creature, contract, pile));
     }
 
     @Test
@@ -188,23 +189,17 @@ class PackContractActionTests extends ActionBehaviourTest {
     }
 
     @Test
-    void testPackingTooManyItems() {
-        for (int i = 0; i < 100; i++) {
-            pile.insertItem(new Item(ItemList.acorn));
-        }
-
-        assertTrue(mod.action(action, creature, pile, mod.getActionId(), 0));
-        assertTrue(creature.getCommunicator().getLastMessage().contains("that many items"));
-    }
-
-    @Test
-    void testAlreadyAssignedContractNotChanged() {
+    void testAlreadyAssignedContractAddedTo() {
         Item acorn = new Item(ItemList.acorn);
         contract.insertItem(acorn);
 
+        Item secondItem = new Item(ItemList.backPack);
+        pile.clear();
+        pile.insertItem(secondItem);
+
         assertTrue(mod.action(action, creature, pile, mod.getActionId(), 0));
         assertTrue(contract.getItems().contains(acorn));
-        assertFalse(contract.getItems().contains(pile.getItems().iterator().next()));
+        assertTrue(contract.getItems().contains(secondItem));
     }
 
     @Test
@@ -636,5 +631,75 @@ class PackContractActionTests extends ActionBehaviourTest {
         mod.action(action, creature, itemToPack, mod.getActionId(), 0);
 
         assertEquals(0, itemToPack.getWatchers().length);
+    }
+
+    @Test
+    void testMaxItemCapIsUsed() {
+        PackContractAction.itemCap = 1001;
+        List<Item> items = new ArrayList<>();
+
+        for (int i = 0; i < 901; i++) {
+            items.add(new Item(ItemList.dirtPile));
+        }
+        items.forEach(contract::insertItem);
+
+        items.clear();
+        for (int i = 0; i < 100; i++) {
+            items.add(new Item(ItemList.dirtPile));
+        }
+        items.forEach(pile::insertItem);
+        assert items.size() + contract.getItemCount() == PackContractAction.itemCap;
+
+        testPackingNotBlocked();
+    }
+
+    @Test
+    void testMaxItemCapExceeded() {
+        PackContractAction.itemCap = 50;
+        List<Item> items = new ArrayList<>();
+
+        for (int i = 0; i < 50; i++) {
+            items.add(new Item(ItemList.dirtPile));
+        }
+        items.forEach(contract::insertItem);
+        items.clear();
+        items.add(new Item(ItemList.dirtPile));
+        items.forEach(pile::insertItem);
+        assert items.size() + contract.getItemCount() > PackContractAction.itemCap;
+
+        testPackingBlocked("not have enough space");
+    }
+
+    @Test
+    void testDescriptionUpdatedCorrectly() {
+        List<Item> items = new ArrayList<>();
+        pile.getItems().clear();
+
+        for (int i = 0; i < 10; i++) {
+            Item item = new Item(ItemList.dirtPile);
+            item.setName("dirt");
+            item.setQualityLevel(5);
+            items.add(item);
+            item = new Item(ItemList.dirtPile);
+            item.setName("dirt");
+            item.setQualityLevel(15);
+            items.add(item);
+        }
+        items.forEach(pile::insertItem);
+        mod.action(action, creature, pile, mod.getActionId(), 0);
+        assertEquals("dirt (avg. 10.0ql) x 20", contract.getDescription());
+
+        items.clear();
+        for (int i = 0; i < 10; i++) {
+            Item item = new Item(ItemList.dirtPile);
+            item.setName("dirt");
+            item.setQualityLevel(25);
+            items.add(item);
+        }
+        items.forEach(pile::insertItem);
+
+        mod.action(action, creature, pile, mod.getActionId(), 0);
+
+        assertEquals("dirt (avg. 15.0ql) x 30", contract.getDescription());
     }
 }
