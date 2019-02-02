@@ -51,8 +51,6 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
 
     // The following would be nice, but would require big workaround that is arguably not worth the effort for marginal benefit.
     // Get Price after sale from trader is modified from full price.  (Unnecessary ItemBehaviour.action override with edge cases.)
-    // TODO - Not authorised to trade large amount to buyer.
-    // TODO - Cannot use that warning when packing from inventory.
 
     public static void addWeightToBlock(Creature creature, int weight) {
         weightBlocker.merge(creature, weight, Integer::sum);
@@ -272,7 +270,7 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
                 "(Z)I",
                 () -> this::getFullWeight);
 
-        // Fix attempted multiple items pack when they are in an inventory window.
+        // Fix multiple items being sent to pack action when they are in an inventory window.
         manager.registerHook("com.wurmonline.server.behaviours.BehaviourDispatcher",
                 "action",
                 "(Lcom/wurmonline/server/creatures/Creature;Lcom/wurmonline/server/creatures/Communicator;JJS)V",
