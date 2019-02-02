@@ -275,9 +275,6 @@ public class PackContractAction implements ModAction, BehaviourProvider, ActionP
                 return true;
             }
 
-            if (source.getItems().contains(target))
-                return true;
-
             Item[] toPack = new Item[0];
             if (target.getTemplateId() == ItemList.itemPile) {
                 toPack = target.getItemsAsArray();

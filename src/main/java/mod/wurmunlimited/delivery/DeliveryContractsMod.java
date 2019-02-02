@@ -46,6 +46,7 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
     private boolean updateTraders = false;
     private boolean contractsOnTraders = true;
     private int itemCap = 1000;
+    private short packActionId;
     private static final Map<Creature, Integer> weightBlocker = new HashMap<>();
 
     // The following would be nice, but would require big workaround that is arguably not worth the effort for marginal benefit.
@@ -136,7 +137,9 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
 
     @Override
     public void onServerStarted() {
-        ModActions.registerAction(new PackContractAction());
+        PackContractAction packAction = new PackContractAction();
+        packActionId = packAction.getActionId();
+        ModActions.registerAction(packAction);
         ModActions.registerAction(new DeliverAction());
 
         try {
@@ -269,6 +272,12 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
                 "(Z)I",
                 () -> this::getFullWeight);
 
+        // Fix attempted multiple items pack when they are in an inventory window.
+        manager.registerHook("com.wurmonline.server.behaviours.BehaviourDispatcher",
+                "action",
+                "(Lcom/wurmonline/server/creatures/Creature;Lcom/wurmonline/server/creatures/Communicator;JJS)V",
+                () -> this::behaviourDispatcher);
+
         try {
             manager.getClassPool().getCtClass("com.wurmonline.server.items.BuyerTradingWindow");
             manager.registerHook("com.wurmonline.server.items.BuyerTradingWindow",
@@ -277,6 +286,20 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
                     () -> this::mayAddFromInventory);
             logger.info("Added hook to Buyer Merchant successfully.");
         } catch (NotFoundException ignored) {}
+    }
+
+    private Object behaviourDispatcher(Object o, Method method, Object[] args) throws InvocationTargetException, IllegalAccessException {
+        if ((short)args[4] == packActionId) {
+            try {
+                Item contract = Items.getItem((Long)args[2]);
+                Item target = Items.getItem((Long)args[3]);
+
+                if (contract.getItems().contains(target))
+                    return null;
+            } catch (NoSuchItemException ignored) {}
+        }
+
+        return method.invoke(o, args);
     }
 
     Object isFullPrice(Object o, Method method, Object[] args) throws InvocationTargetException, IllegalAccessException {
