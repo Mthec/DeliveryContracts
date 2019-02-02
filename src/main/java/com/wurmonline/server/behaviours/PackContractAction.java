@@ -32,7 +32,7 @@ public class PackContractAction implements ModAction, BehaviourProvider, ActionP
     private static final Logger logger = Logger.getLogger(PackContractAction.class.getName());
     private final short actionId;
     private final ActionEntry actionEntry;
-    public static int itemCap = 1000;
+    public static int itemCap;
 
     public PackContractAction() {
         actionId = (short)ModActions.getNextActionId();

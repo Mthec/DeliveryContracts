@@ -45,11 +45,13 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
     private int contractPrice = MonetaryConstants.COIN_COPPER * 10;
     private boolean updateTraders = false;
     private boolean contractsOnTraders = true;
+    private int itemCap = 1000;
     private static final Map<Creature, Integer> weightBlocker = new HashMap<>();
 
     // The following would be nice, but would require big workaround that is arguably not worth the effort for marginal benefit.
     // Get Price after sale from trader is modified from full price.  (Unnecessary ItemBehaviour.action override with edge cases.)
-    // TODO - Multiple Pack ups, with sensible item limit.
+    // TODO - Not authorised to trade large amount to buyer.
+    // TODO - Cannot use that warning when packing from inventory.
 
     public static void addWeightToBlock(Creature creature, int weight) {
         weightBlocker.merge(creature, weight, Integer::sum);
@@ -86,7 +88,7 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
                 int maxItems = Integer.parseInt(val);
                 if (maxItems < 0)
                     throw new NumberFormatException();
-                PackContractAction.itemCap = maxItems;
+                itemCap = maxItems;
             } catch (NumberFormatException e) {
                 logger.warning("Invalid value for max_items.  Must be a non-negative whole number.  Using default of 1000.");
             }
@@ -146,6 +148,8 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
             logger.warning("Error setting template id for Buyer Merchant mod, contracts will not be processed by buyers.");
             e.printStackTrace();
         }
+
+        PackContractAction.itemCap = itemCap;
 
         if (updateTraders) {
             if (contractsOnTraders) {
