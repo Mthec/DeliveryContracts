@@ -276,6 +276,12 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
                 "(Lcom/wurmonline/server/creatures/Creature;Lcom/wurmonline/server/creatures/Communicator;JJS)V",
                 () -> this::behaviourDispatcher);
 
+        // Destroy contents of contract when contract is destroyed.
+        manager.registerHook("com.wurmonline.server.items.Items",
+                "destroyItem",
+                "(JZZ)V",
+                () -> this::destroyItem);
+
         try {
             manager.getClassPool().getCtClass("com.wurmonline.server.items.BuyerTradingWindow");
             manager.registerHook("com.wurmonline.server.items.BuyerTradingWindow",
@@ -286,8 +292,20 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
         } catch (NotFoundException ignored) {}
     }
 
-    private Object behaviourDispatcher(Object o, Method method, Object[] args) throws InvocationTargetException, IllegalAccessException {
-        if ((short)args[4] == packActionId) {
+    Object destroyItem(Object o, Method method, Object[] args) throws Throwable {
+        try {
+            Item contractOrContents = Items.getItem((Long)args[0]);
+            if (contractOrContents.getTemplateId() == templateId || isInContract(contractOrContents)) {
+                for (Item item : contractOrContents.getItems())
+                    Items.destroyItem(item.getWurmId());
+            }
+        } catch (NoSuchItemException ignored) {}
+
+        return method.invoke(o, args);
+    }
+
+    Object behaviourDispatcher(Object o, Method method, Object[] args) throws Throwable {
+        if ((Short)args[4] == packActionId) {
             try {
                 Item contract = Items.getItem((Long)args[2]);
                 Item target = Items.getItem((Long)args[3]);
@@ -297,7 +315,11 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
             } catch (NoSuchItemException ignored) {}
         }
 
-        return method.invoke(o, args);
+        try {
+            return method.invoke(o, args);
+        } catch (InvocationTargetException e) {
+            throw e.getCause();
+        }
     }
 
     Object isFullPrice(Object o, Method method, Object[] args) throws InvocationTargetException, IllegalAccessException {
@@ -329,12 +351,17 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
         return method.invoke(o, args);
     }
 
-    Object moveToItem(Object o, Method method, Object[] args) throws InvocationTargetException, IllegalAccessException {
+    Object moveToItem(Object o, Method method, Object[] args) throws Throwable {
         try {
             if (isInContract((Item)o) || isInContract(Items.getItem((long)args[1])))
                 return false;
         } catch (NoSuchItemException ignored) {}
-        return method.invoke(o, args);
+
+        try {
+            return method.invoke(o, args);
+        } catch (InvocationTargetException e) {
+            throw e.getCause();
+        }
     }
 
     Object setOwner(Object o, Method method, Object[] args) throws InvocationTargetException, IllegalAccessException {

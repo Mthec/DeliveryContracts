@@ -1,6 +1,10 @@
 package mod.wurmunlimited.delivery;
 
+import com.wurmonline.server.Items;
+import com.wurmonline.server.behaviours.Action;
 import com.wurmonline.server.behaviours.ActionEntry;
+import com.wurmonline.server.behaviours.PackContractAction;
+import com.wurmonline.server.creatures.Communicator;
 import com.wurmonline.server.creatures.Creature;
 import com.wurmonline.server.creatures.Creatures;
 import com.wurmonline.server.economy.Economy;
@@ -10,12 +14,14 @@ import com.wurmonline.server.items.ItemList;
 import com.wurmonline.server.items.ItemTemplate;
 import com.wurmonline.server.items.TradingWindow;
 import com.wurmonline.server.players.Player;
+import org.gotti.wurmunlimited.modloader.ReflectionUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.stubbing.Answer;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Properties;
@@ -633,5 +639,144 @@ class DeliveryContractsModTests {
 
         assertNull(handler.invoke(contract, method, args));
         verify(method, times(1)).invoke(contract, args);
+    }
+
+    @Test
+    void testBlockUnintendedMultiplePackingIntoContentsBlocked() throws Throwable {
+        DeliveryContractsMod deliveryContractsMod = new DeliveryContractsMod();
+        Item contract = new Item(DeliveryContractsMod.getTemplateId());
+        Item pile = new Item(ItemList.itemPile);
+        Item dirt1 = new Item(ItemList.dirtPile);
+        Item dirt2 = new Item(ItemList.dirtPile);
+        Item dirt3 = new Item(ItemList.dirtPile);
+        pile.insertItem(dirt1);
+        pile.insertItem(dirt2);
+        pile.insertItem(dirt3);
+        short actionId = 12323;
+        PackContractAction packAction = ReflectionUtil.callPrivateConstructor(PackContractAction.class.getDeclaredConstructor(short.class), actionId);
+        PackContractAction.itemCap = 1000;
+        ReflectionUtil.setPrivateField(deliveryContractsMod, DeliveryContractsMod.class.getDeclaredField("packActionId"), actionId);
+        Creature player = new Player();
+
+        InvocationHandler handler = deliveryContractsMod::behaviourDispatcher;
+        Method method = mock(Method.class);
+        when(method.invoke(any(), any())).then((Answer<Void>)i -> {
+            Action action = mock(Action.class);
+            when(action.getSubjectId()).thenReturn(i.getArgument(3));
+            packAction.action(action, player, Items.getItem(i.getArgument(4)), actionId, 0);
+            return null;
+        });
+        Object[] args1 = new Object[] { player, mock(Communicator.class), contract.getWurmId(), dirt1.getWurmId(), actionId };
+        Object[] args2 = new Object[] { player, mock(Communicator.class), contract.getWurmId(), dirt2.getWurmId(), actionId };
+        Object[] args3 = new Object[] { player, mock(Communicator.class), contract.getWurmId(), dirt3.getWurmId(), actionId };
+
+        assertNull(handler.invoke(contract, method, args1));
+        verify(method, times(1)).invoke(contract, args1);
+        assertNull(handler.invoke(contract, method, args2));
+        verify(method, never()).invoke(contract, args2);
+        assertNull(handler.invoke(contract, method, args3));
+        verify(method, never()).invoke(contract, args3);
+    }
+
+    @Test
+    void testBlockNormalMultipleActionNotBlocked() throws Throwable {
+        DeliveryContractsMod deliveryContractsMod = new DeliveryContractsMod();
+        Item source = new Item(ItemList.wandGM);
+        Item pile = new Item(ItemList.itemPile);
+        Item dirt1 = new Item(ItemList.dirtPile);
+        Item dirt2 = new Item(ItemList.dirtPile);
+        Item dirt3 = new Item(ItemList.dirtPile);
+        pile.insertItem(dirt1);
+        pile.insertItem(dirt2);
+        pile.insertItem(dirt3);
+        short actionId = 7;
+        Creature player = new Player();
+
+        InvocationHandler handler = deliveryContractsMod::behaviourDispatcher;
+        Method method = mock(Method.class);
+        Object[] args1 = new Object[] { player, mock(Communicator.class), source.getWurmId(), dirt1.getWurmId(), actionId };
+        Object[] args2 = new Object[] { player, mock(Communicator.class), source.getWurmId(), dirt2.getWurmId(), actionId };
+        Object[] args3 = new Object[] { player, mock(Communicator.class), source.getWurmId(), dirt3.getWurmId(), actionId };
+
+        assertNull(handler.invoke(source, method, args1));
+        verify(method, times(1)).invoke(source, args1);
+        assertNull(handler.invoke(source, method, args2));
+        verify(method, times(1)).invoke(source, args2);
+        assertNull(handler.invoke(source, method, args3));
+        verify(method, times(1)).invoke(source, args3);
+    }
+
+    @Test
+    void testDestroyItemDestroysContents() throws Throwable {
+        DeliveryContractsMod deliveryContractsMod = new DeliveryContractsMod();
+        Item contract = new Item(DeliveryContractsMod.getTemplateId());
+        Item contents = new Item(ItemList.dirtPile);
+        contract.insertItem(contents);
+
+        InvocationHandler handler = deliveryContractsMod::destroyItem;
+        Method method = mock(Method.class);
+        when(method.invoke(any(), any())).then((Answer<Void>)i -> {
+            Items.destroyItem(((Item)i.getArgument(0)).getWurmId());
+            return null;
+        });
+        Object[] args = new Object[] { contract.getWurmId(), true, true };
+
+        assertNull(handler.invoke(contract, method, args));
+        verify(method, times(1)).invoke(contract, args);
+        assertTrue(Items.wasDestroyed(contract));
+        assertTrue(Items.wasDestroyed(contents));
+    }
+
+    @Test
+    void testDestroyItemDoesNotOverrideNormalBehaviourForOtherItems() throws Throwable {
+        DeliveryContractsMod deliveryContractsMod = new DeliveryContractsMod();
+        Item contents = new Item(ItemList.bowlPottery);
+        Item subContents = new Item(ItemList.acorn);
+        contents.insertItem(subContents);
+
+        InvocationHandler handler = deliveryContractsMod::destroyItem;
+        Method method = mock(Method.class);
+        when(method.invoke(any(), any())).then((Answer<Void>)i -> {
+            Items.destroyItem(((Item)i.getArgument(0)).getWurmId());
+            return null;
+        });
+        Object[] args = new Object[] { contents.getWurmId(), true, true };
+
+        assertNull(handler.invoke(contents, method, args));
+        verify(method, times(1)).invoke(contents, args);
+        assertTrue(Items.wasDestroyed(contents));
+        assertFalse(Items.wasDestroyed(subContents));
+    }
+
+    private class FakeException extends Exception {}
+
+    @Test
+    void testBehaviourDispatcherExceptionsNotBlocked() throws InvocationTargetException, IllegalAccessException {
+        DeliveryContractsMod deliveryContractsMod = new DeliveryContractsMod();
+        Item source = new Item(ItemList.wandGM);
+        Item dirt1 = new Item(ItemList.dirtPile);
+        short actionId = 7;
+        Creature player = new Player();
+
+        InvocationHandler handler = deliveryContractsMod::behaviourDispatcher;
+        Method method = mock(Method.class);
+        when(method.invoke(any(), any())).thenThrow(new InvocationTargetException(new FakeException()));
+        Object[] args1 = new Object[] { player, mock(Communicator.class), source.getWurmId(), dirt1.getWurmId(), actionId };
+
+        assertThrows(FakeException.class, () -> handler.invoke(source, method, args1));
+    }
+
+    @Test
+    void testMoveToItemExceptionsNotBlocked() throws InvocationTargetException, IllegalAccessException {
+        DeliveryContractsMod deliveryContractsMod = new DeliveryContractsMod();
+        Item source = new Item(ItemList.wandGM);
+        Creature player = new Player();
+
+        InvocationHandler handler = deliveryContractsMod::moveToItem;
+        Method method = mock(Method.class);
+        when(method.invoke(any(), any())).thenThrow(new InvocationTargetException(new FakeException()));
+        Object[] args1 = new Object[] { player, 1L, true };
+
+        assertThrows(FakeException.class, () -> handler.invoke(source, method, args1));
     }
 }
