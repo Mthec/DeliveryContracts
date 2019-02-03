@@ -296,8 +296,11 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
         try {
             Item contractOrContents = Items.getItem((Long)args[0]);
             if (contractOrContents.getTemplateId() == templateId || isInContract(contractOrContents)) {
-                for (Item item : contractOrContents.getItems())
+                for (Item item : contractOrContents.getItems().toArray(new Item[0])) {
+                    // Not sure if it is needed for recycled items.
+                    item.setMailed(false);
                     Items.destroyItem(item.getWurmId());
+                }
             }
         } catch (NoSuchItemException ignored) {}
 
