@@ -277,7 +277,7 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
                 () -> this::behaviourDispatcher);
 
         // Destroy contents of contract when contract is destroyed.
-        manager.registerHook("com.wurmonline.server.items.Items",
+        manager.registerHook("com.wurmonline.server.Items",
                 "destroyItem",
                 "(JZZ)V",
                 () -> this::destroyItem);
