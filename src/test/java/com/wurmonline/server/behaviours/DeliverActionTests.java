@@ -5,6 +5,7 @@ import com.wurmonline.server.items.Item;
 import com.wurmonline.server.items.ItemList;
 import com.wurmonline.server.villages.Village;
 import com.wurmonline.server.zones.VolaTile;
+import mod.wurmunlimited.delivery.DeliveryContractsMod;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -161,5 +162,109 @@ class DeliverActionTests extends ActionBehaviourTest {
         assertEquals(10, contract.getItemCount());
         assertTrue(creature.getCommunicator().getLastMessage().contains("some of the items"));
         assertEquals("remaining items x 10", contract.getDescription());
+    }
+
+    @Test
+    void testHasNoDecayRemovedOnDelivery() {
+        DeliveryContractsMod.setNoDecay = true;
+        Item target = new Item(ItemList.dirtPile);
+        target.setHasNoDecay(true);
+        contract.insertItem(target);
+
+        mod.action(action, creature, waystone, mod.getActionId(), 0);
+        assertFalse(target.hasNoDecay());
+    }
+
+    @Test
+    void testHasNoDecayRemovedFromSubItemsOnDelivery() {
+        DeliveryContractsMod.setNoDecay = true;
+        Item backpack = new Item(ItemList.backPack);
+        Item target = new Item(ItemList.acorn);
+        backpack.insertItem(target);
+        backpack.setHasNoDecay(true);
+        target.setHasNoDecay(true);
+        contract.insertItem(backpack);
+
+        mod.action(action, creature, waystone, mod.getActionId(), 0);
+        assertFalse(backpack.hasNoDecay());
+        assertFalse(target.hasNoDecay());
+    }
+
+    @Test
+    void testHasNoDecayNotRemovedOnDeliveryIfAlreadyHadNoDecay() {
+        DeliveryContractsMod.setNoDecay = true;
+        Item target = new Item(ItemList.dirtPile);
+        target.setHasNoDecay(true);
+
+        PackContractAction packContractAction = new PackContractAction();
+        packContractAction.action(action, creature, target, packContractAction.getActionId(), 0);
+
+        assert contract.contains(target);
+        assert target.hasNoDecay();
+
+        mod.action(action, creature, waystone, mod.getActionId(), 0);
+        assertFalse(contract.contains(target));
+        assertTrue(target.hasNoDecay());
+    }
+
+    @Test
+    void testHasNoDecayRemovedFromFoodOnDeliveryIfOnlyFoodOptionSet() {
+        DeliveryContractsMod.setNoDecay = false;
+        DeliveryContractsMod.setNoDecayFood = true;
+        Item target = new Item(ItemList.casserole);
+        target.food = true;
+        assert !target.hasNoDecay();
+
+        PackContractAction packContractAction = new PackContractAction();
+        packContractAction.action(action, creature, target, packContractAction.getActionId(), 0);
+
+        assert contract.contains(target);
+        assert target.hasNoDecay();
+
+        mod.action(action, creature, waystone, mod.getActionId(), 0);
+        assertFalse(contract.contains(target));
+        assertFalse(target.hasNoDecay());
+    }
+
+    @Test
+    void testHasNoDecayRemovedFromFoodInContainerOnDeliveryIfOnlyFoodOptionSet() {
+        DeliveryContractsMod.setNoDecay = false;
+        DeliveryContractsMod.setNoDecayFood = true;
+        Item target = new Item(ItemList.casserole);
+        target.food = true;
+        assert !target.hasNoDecay();
+        Item bowl = new Item(ItemList.bowlPottery);
+        bowl.insertItem(target);
+        assert !bowl.hasNoDecay();
+
+        PackContractAction packContractAction = new PackContractAction();
+        packContractAction.action(action, creature, bowl, packContractAction.getActionId(), 0);
+
+        assert contract.contains(bowl);
+        assert target.hasNoDecay();
+        assert !bowl.hasNoDecay();
+
+        mod.action(action, creature, waystone, mod.getActionId(), 0);
+        assertFalse(contract.contains(bowl));
+        assertFalse(target.hasNoDecay());
+        assertFalse(bowl.hasNoDecay());
+    }
+
+    @Test
+    void testHasNoDecayNotRemovedFromItemOnDeliveryIfOnlyFoodOptionSet() {
+        DeliveryContractsMod.setNoDecay = false;
+        DeliveryContractsMod.setNoDecayFood = true;
+        Item target = new Item(ItemList.dirtPile);
+        target.setHasNoDecay(true);
+
+        PackContractAction packContractAction = new PackContractAction();
+        packContractAction.action(action, creature, target, packContractAction.getActionId(), 0);
+
+        assert contract.contains(target);
+        assert target.hasNoDecay();
+
+        mod.action(action, creature, waystone, mod.getActionId(), 0);
+        assertFalse(contract.contains(target));
+        assertTrue(target.hasNoDecay());
     }
 }

@@ -29,6 +29,7 @@ public class Creature {
     public boolean onSurface;
     public boolean withinDistance = true;
     public long vehicle;
+    public int power;
 
     public Creature() {
         id = nextWurmId++;
@@ -171,7 +172,7 @@ public class Creature {
     }
 
     public int getPower() {
-        return 0;
+        return power;
     }
 
     public Shop getShop() {

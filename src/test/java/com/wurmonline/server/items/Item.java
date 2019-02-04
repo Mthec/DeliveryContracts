@@ -51,6 +51,8 @@ public class Item {
     public boolean fullPrice = false;
     public boolean noSellBack = false;
     public byte material = 0;
+    public boolean noDecay;
+    public boolean food;
 
     public Item(int templateId) {
         this.templateId = templateId;
@@ -526,5 +528,17 @@ public class Item {
 
     public boolean isOutsideOnly() {
         return false;
+    }
+
+    public boolean hasNoDecay() {
+        return noDecay;
+    }
+
+    public void setHasNoDecay(boolean hasNoDecay) {
+        noDecay = hasNoDecay;
+    }
+
+    public boolean isFood() {
+        return food;
     }
 }

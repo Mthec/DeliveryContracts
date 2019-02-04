@@ -50,6 +50,22 @@ public class DeliverAction implements ModAction, BehaviourProvider, ActionPerfor
         return null;
     }
 
+    private void unMarkItemAndSubItems(Item item) {
+        item.setMailed(false);
+        if (DeliveryContractsMod.setNoDecay) {
+            String description = item.getDescription();
+            if (description.endsWith("*"))
+                item.setDescription(description.substring(0, description.length() - 1));
+            else
+                item.setHasNoDecay(false);
+        } else if (DeliveryContractsMod.setNoDecayFood && item.isFood())
+            item.setHasNoDecay(false);
+
+        for (Item subItem : item.getItems()) {
+            unMarkItemAndSubItems(subItem);
+        }
+    }
+
     @Override
     public boolean action(Action action, Creature performer, Item target, short num, float counter) {
         if (num == actionId) {
@@ -67,7 +83,7 @@ public class DeliverAction implements ModAction, BehaviourProvider, ActionPerfor
                     ItemBehaviour b = (ItemBehaviour)Behaviours.getInstance().getBehaviour(BehaviourList.itemBehaviour);
                     b.action(null, performer, items, Actions.DROP_AS_PILE, 0);
                     Arrays.stream(items).filter(item -> !source.getItems().contains(item))
-                            .forEach(item -> item.setMailed(false));
+                            .forEach(this::unMarkItemAndSubItems);
 
                     if (source.getItemCount() == items.length) {
                         // Message sent via ItemBehaviour.

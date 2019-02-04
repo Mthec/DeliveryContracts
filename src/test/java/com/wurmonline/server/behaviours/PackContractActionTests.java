@@ -11,11 +11,13 @@ import com.wurmonline.server.zones.VolaTile;
 import com.wurmonline.server.zones.Zone;
 import com.wurmonline.server.zones.Zones;
 import com.wurmonline.shared.constants.ItemMaterials;
+import mod.wurmunlimited.delivery.DeliveryContractsMod;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Properties;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -701,5 +703,123 @@ class PackContractActionTests extends ActionBehaviourTest {
         mod.action(action, creature, pile, mod.getActionId(), 0);
 
         assertEquals("dirt (avg. 15.0ql) x 30", contract.getDescription());
+    }
+
+    @Test
+    void testSubItemsMarkedMailedWhenPacked() {
+        Item backpack = new Item(ItemList.backPack);
+        backpack.insertItem(itemToPack);
+        mod.action(action, creature, backpack, mod.getActionId(), 0);
+
+        assertTrue(backpack.isMailed());
+        assertTrue(itemToPack.isMailed());
+    }
+
+    @Test
+    void testItemsAreSetToNoDecayWhenInContractIfOptionIsSet() {
+        DeliveryContractsMod deliveryContractsMod = new DeliveryContractsMod();
+        Properties properties = new Properties();
+        properties.setProperty("no_decay_in_contract", "true");
+        deliveryContractsMod.configure(properties);
+
+        Item target = new Item(ItemList.dirtPile);
+        assert !target.hasNoDecay();
+
+        assertTrue(mod.action(action, creature, target, mod.getActionId(), 0));
+        assertTrue(contract.contains(target));
+        assertTrue(target.hasNoDecay());
+    }
+
+    @Test
+    void testSubItemsAreSetToNoDecayWhenInContractIfOptionIsSet() {
+        DeliveryContractsMod deliveryContractsMod = new DeliveryContractsMod();
+        Properties properties = new Properties();
+        properties.setProperty("no_decay_in_contract", "true");
+        deliveryContractsMod.configure(properties);
+
+        Item backpack = new Item(ItemList.backPack);
+        Item target = new Item(ItemList.ironBar);
+        backpack.insertItem(target);
+        assert !backpack.hasNoDecay();
+        assert !target.hasNoDecay();
+
+        assertTrue(mod.action(action, creature, backpack, mod.getActionId(), 0));
+        assertTrue(contract.contains(backpack));
+        assertTrue(backpack.hasNoDecay());
+        assertTrue(target.hasNoDecay());
+    }
+
+    @Test
+    void testItemsAreNotSetToNoDecayWhenInContractIfOptionIsNotSet() {
+        assert !DeliveryContractsMod.setNoDecay;
+
+        Item target = new Item(ItemList.dirtPile);
+        assert !target.hasNoDecay();
+
+        assertTrue(mod.action(action, creature, target, mod.getActionId(), 0));
+        assertTrue(contract.contains(target));
+        assertFalse(target.hasNoDecay());
+    }
+
+    @Test
+    void testFoodIsSetToNoDecayWhenInContractIfOptionIsSet() {
+        DeliveryContractsMod deliveryContractsMod = new DeliveryContractsMod();
+        Properties properties = new Properties();
+        properties.setProperty("no_decay_food", "true");
+        deliveryContractsMod.configure(properties);
+
+        Item target = new Item(ItemList.casserole);
+        target.food = true;
+        assert !target.hasNoDecay();
+
+        assertTrue(mod.action(action, creature, target, mod.getActionId(), 0));
+        assertTrue(contract.contains(target));
+        assertTrue(target.hasNoDecay());
+    }
+
+    @Test
+    void testFoodIsNotSetToNoDecayWhenInContractIfOptionIsNotSet() {
+        assert !DeliveryContractsMod.setNoDecayFood;
+
+        Item target = new Item(ItemList.casserole);
+        target.food = true;
+        assert !target.hasNoDecay();
+
+        assertTrue(mod.action(action, creature, target, mod.getActionId(), 0));
+        assertTrue(contract.contains(target));
+        assertFalse(target.hasNoDecay());
+    }
+
+
+    @Test
+    void testItemsNotSetToNoDecayWhenInContractIfFoodOptionIsSet() {
+        assert !DeliveryContractsMod.setNoDecay;
+
+        Item target = new Item(ItemList.dirtPile);
+        assert !target.hasNoDecay();
+
+        assertTrue(mod.action(action, creature, target, mod.getActionId(), 0));
+        assertTrue(contract.contains(target));
+        assertFalse(target.hasNoDecay());
+    }
+
+    @Test
+    void testFoodInContainerIsSetToNoDecayWhenInContractIfOptionIsSet() {
+        DeliveryContractsMod deliveryContractsMod = new DeliveryContractsMod();
+        Properties properties = new Properties();
+        properties.setProperty("no_decay_food", "true");
+        deliveryContractsMod.configure(properties);
+
+        Item target = new Item(ItemList.casserole);
+        target.food = true;
+        assert !target.hasNoDecay();
+        Item bowl = new Item(ItemList.bowlPottery);
+        assert !bowl.hasNoDecay();
+        bowl.insertItem(target);
+
+        assertTrue(mod.action(action, creature, bowl, mod.getActionId(), 0));
+        assertTrue(contract.contains(bowl));
+        assertTrue(target.hasNoDecay());
+        assertFalse(bowl.hasNoDecay());
     }
 }

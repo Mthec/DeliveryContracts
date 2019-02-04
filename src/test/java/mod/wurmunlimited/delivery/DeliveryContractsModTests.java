@@ -3,6 +3,7 @@ package mod.wurmunlimited.delivery;
 import com.wurmonline.server.Items;
 import com.wurmonline.server.behaviours.Action;
 import com.wurmonline.server.behaviours.ActionEntry;
+import com.wurmonline.server.behaviours.Actions;
 import com.wurmonline.server.behaviours.PackContractAction;
 import com.wurmonline.server.creatures.Communicator;
 import com.wurmonline.server.creatures.Creature;
@@ -23,6 +24,8 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 
@@ -707,6 +710,56 @@ class DeliveryContractsModTests {
     }
 
     @Test
+    void testBehaviourDispatcherAllowsPackedItemsToBeDestroyed() throws Throwable {
+        DeliveryContractsMod deliveryContractsMod = new DeliveryContractsMod();
+        Item source = new Item(ItemList.wandGM);
+        Item dirt1 = new Item(ItemList.dirtPile);
+        dirt1.setMailed(true);
+        short actionId = Actions.DESTROY;
+        Creature player = new Player();
+        player.power = 2;
+
+        InvocationHandler handler = deliveryContractsMod::behaviourDispatcher;
+        Method method = mock(Method.class);
+        when(method.invoke(any(), any())).then((Answer<Void>)i -> {
+            Item target = Items.getItem(i.getArgument(4));
+            if (!target.isMailed())
+                Items.destroyItem(target.getWurmId());
+            return null;
+        });
+        Object[] args1 = new Object[] { player, mock(Communicator.class), source.getWurmId(), dirt1.getWurmId(), actionId };
+
+        assertNull(handler.invoke(source, method, args1));
+        verify(method, times(1)).invoke(source, args1);
+        assertTrue(Items.wasDestroyed(dirt1));
+    }
+
+    @Test
+    void testBehaviourDispatcherBlocksPackedItemsBeingDestroyedByNonGM() throws Throwable {
+        DeliveryContractsMod deliveryContractsMod = new DeliveryContractsMod();
+        Item source = new Item(ItemList.wandGM);
+        Item dirt1 = new Item(ItemList.dirtPile);
+        dirt1.setMailed(true);
+        short actionId = Actions.DESTROY;
+        Creature player = new Player();
+        player.power = 0;
+
+        InvocationHandler handler = deliveryContractsMod::behaviourDispatcher;
+        Method method = mock(Method.class);
+        when(method.invoke(any(), any())).then((Answer<Void>)i -> {
+            Item target = Items.getItem(i.getArgument(4));
+            if (!target.isMailed())
+                Items.destroyItem(target.getWurmId());
+            return null;
+        });
+        Object[] args1 = new Object[] { player, mock(Communicator.class), source.getWurmId(), dirt1.getWurmId(), actionId };
+
+        assertNull(handler.invoke(source, method, args1));
+        verify(method, times(1)).invoke(source, args1);
+        assertFalse(Items.wasDestroyed(dirt1));
+    }
+
+    @Test
     void testDestroyItemDestroysContents() throws Throwable {
         DeliveryContractsMod deliveryContractsMod = new DeliveryContractsMod();
         Item contract = new Item(DeliveryContractsMod.getTemplateId());
@@ -778,5 +831,116 @@ class DeliveryContractsModTests {
         Object[] args1 = new Object[] { player, 1L, true };
 
         assertThrows(FakeException.class, () -> handler.invoke(source, method, args1));
+    }
+
+    private ByteBuffer getCommand() {
+        byte[] message = "#dcCleanup".getBytes();
+        ByteBuffer byteBuffer = ByteBuffer.allocate(65534);
+        byteBuffer.put((byte)99);
+        byteBuffer.put((byte)message.length);
+        byteBuffer.put(message);
+        byteBuffer.put((byte)message.length);
+        byteBuffer.put(message);
+        return byteBuffer;
+    }
+
+    // TODO - Work out what ByteBuffer needs to be.
+
+//    @Test
+//    void testCleanupCommand() throws Throwable {
+//        DeliveryContractsMod deliveryContractsMod = new DeliveryContractsMod();
+//        Creature player = new Player();
+//        player.power = 2;
+//        Communicator comm = player.getCommunicator();
+//        Items.reset();
+//        int num = 10;
+//        for (int i = 0; i < num; i++) {
+//            Item item = new Item(ItemList.dirtPile);
+//            item.mailed = true;
+//        }
+//
+//        InvocationHandler handler = deliveryContractsMod::serverCommand;
+//        Method method = mock(Method.class);
+//        Object[] args = new Object[] { getCommand() };
+//
+//        assertNull(handler.invoke(comm, method, args));
+//        verify(method, never()).invoke(any(), any());
+//        assertTrue(Arrays.stream(Items.getAllItems()).allMatch(i -> i.getTemplateId() == ItemList.dirtPile && Items.wasDestroyed(i)));
+//        assertTrue(comm.getLastMessage().contains("Cleaned up " + num + " items."));
+//    }
+//
+//    @Test
+//    void testCleanupCommandOncePerMinute() throws Throwable {
+//        DeliveryContractsMod deliveryContractsMod = new DeliveryContractsMod();
+//        Creature player = new Player();
+//        player.power = 2;
+//        Communicator comm = player.getCommunicator();
+//        Items.reset();
+//        int num = 10;
+//        for (int i = 0; i < num; i++) {
+//            Item item = new Item(ItemList.dirtPile);
+//            item.mailed = true;
+//        }
+//
+//        InvocationHandler handler = deliveryContractsMod::serverCommand;
+//        Method method = mock(Method.class);
+//        Object[] args = new Object[] { getCommand() };
+//
+//        ReflectionUtil.setPrivateField(deliveryContractsMod, DeliveryContractsMod.class.getDeclaredField("lastCleanup"), System.currentTimeMillis());
+//        assertNull(handler.invoke(comm, method, args));
+//        verify(method, never()).invoke(any(), any());
+//        assertTrue(Arrays.stream(Items.getAllItems()).noneMatch(i -> i.getTemplateId() == ItemList.dirtPile && Items.wasDestroyed(i)));
+//        assertTrue(comm.getLastMessage().startsWith("You must wait"));
+//
+//        ReflectionUtil.setPrivateField(deliveryContractsMod, DeliveryContractsMod.class.getDeclaredField("lastCleanup"), System.currentTimeMillis() - TimeConstants.MINUTE_MILLIS);
+//        assertNull(handler.invoke(comm, method, args));
+//        verify(method, never()).invoke(any(), any());
+//        assertTrue(Arrays.stream(Items.getAllItems()).allMatch(i -> i.getTemplateId() == ItemList.dirtPile && Items.wasDestroyed(i)));
+//        assertFalse(comm.getLastMessage().startsWith("You must wait"));
+//        assertTrue(comm.getLastMessage().contains("Cleaned up " + num + " items."));
+//    }
+
+    @Test
+    void testCleanupCommandOnlyByGM() throws Throwable {
+        DeliveryContractsMod deliveryContractsMod = new DeliveryContractsMod();
+        Creature player = new Player();
+        player.power = 0;
+        Communicator comm = player.getCommunicator();
+        Items.reset();
+        int num = 10;
+        for (int i = 0; i < num; i++) {
+            Item item = new Item(ItemList.dirtPile);
+            item.mailed = true;
+        }
+
+        InvocationHandler handler = deliveryContractsMod::serverCommand;
+        Method method = mock(Method.class);
+        Object[] args = new Object[] { getCommand() };
+
+        assertNull(handler.invoke(comm, method, args));
+        verify(method, times(1)).invoke(comm, args);
+        assertTrue(Arrays.stream(Items.getAllItems()).noneMatch(i -> i.getTemplateId() == ItemList.dirtPile && Items.wasDestroyed(i)));
+    }
+
+    @Test
+    void testCleanupCommandNotCalledIfDifferentCommand() throws Throwable {
+        DeliveryContractsMod deliveryContractsMod = new DeliveryContractsMod();
+        Creature player = new Player();
+        player.power = 0;
+        Communicator comm = player.getCommunicator();
+        Items.reset();
+        int num = 10;
+        for (int i = 0; i < num; i++) {
+            Item item = new Item(ItemList.dirtPile);
+            item.mailed = true;
+        }
+
+        InvocationHandler handler = deliveryContractsMod::serverCommand;
+        Method method = mock(Method.class);
+        Object[] args = new Object[] { getCommand() };
+
+        assertNull(handler.invoke(comm, method, args));
+        verify(method, times(1)).invoke(comm, args);
+        assertTrue(Arrays.stream(Items.getAllItems()).noneMatch(i -> i.getTemplateId() == ItemList.dirtPile && Items.wasDestroyed(i)));
     }
 }

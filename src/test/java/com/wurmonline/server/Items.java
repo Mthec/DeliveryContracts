@@ -81,4 +81,8 @@ public class Items {
     public static void fakeError(Item item) {
         fakeErrors.add(item);
     }
+
+    public static Item[] getAllItems() {
+        return items.values().toArray(new Item[0]);
+    }
 }

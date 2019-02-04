@@ -237,8 +237,23 @@ public class PackContractAction implements ModAction, BehaviourProvider, ActionP
         contract.insertItem(target, true);
         performer.getCommunicator().sendUpdateInventoryItem(target);
         target.setOnBridge(-10L);
-        target.setMailed(true);
+        markItemAndSubItems(target);
         target.setLastMaintained(WurmCalendar.currentTime);
+    }
+
+    private void markItemAndSubItems(Item target) {
+        target.setMailed(true);
+        if (DeliveryContractsMod.setNoDecay) {
+            if (target.hasNoDecay())
+                target.setDescription(target.getDescription() + "*");
+            target.setHasNoDecay(true);
+        } else if (DeliveryContractsMod.setNoDecayFood && target.isFood()) {
+            target.setHasNoDecay(true);
+        }
+
+        for (Item item : target.getItems()) {
+            markItemAndSubItems(item);
+        }
     }
 
     private String getFullName(Item item) {

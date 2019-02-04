@@ -4,6 +4,7 @@ package com.wurmonline.server.creatures;
 import com.wurmonline.server.Items;
 import com.wurmonline.server.NoSuchItemException;
 import com.wurmonline.server.items.Item;
+import com.wurmonline.server.players.Player;
 
 public class Communicator {
     private final Creature creature;
@@ -47,5 +48,11 @@ public class Communicator {
             e.printStackTrace();
         }
         return true;
+    }
+
+    public Player getPlayer() {
+        if (creature instanceof Player)
+            return (Player)creature;
+        return null;
     }
 }

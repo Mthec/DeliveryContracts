@@ -39,6 +39,8 @@ public class ActionBehaviourTest {
         Zones.reset();
         Economy.reset();
         PackContractAction.itemCap = 1000;
+        DeliveryContractsMod.setNoDecay = false;
+        DeliveryContractsMod.setNoDecayFood = false;
 
         creature = new Creature();
         creature.currentTile = new VolaTile(0);

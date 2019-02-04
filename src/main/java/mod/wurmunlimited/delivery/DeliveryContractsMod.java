@@ -1,23 +1,16 @@
 package mod.wurmunlimited.delivery;
 
-import com.wurmonline.server.Items;
-import com.wurmonline.server.NoSuchItemException;
-import com.wurmonline.server.NoSuchPlayerException;
-import com.wurmonline.server.Server;
-import com.wurmonline.server.behaviours.ActionEntry;
-import com.wurmonline.server.behaviours.BehaviourList;
-import com.wurmonline.server.behaviours.DeliverAction;
-import com.wurmonline.server.behaviours.PackContractAction;
+import com.wurmonline.server.*;
+import com.wurmonline.server.behaviours.*;
+import com.wurmonline.server.creatures.Communicator;
 import com.wurmonline.server.creatures.Creature;
 import com.wurmonline.server.creatures.Creatures;
 import com.wurmonline.server.creatures.NoSuchCreatureException;
 import com.wurmonline.server.economy.Economy;
 import com.wurmonline.server.economy.MonetaryConstants;
 import com.wurmonline.server.economy.Shop;
-import com.wurmonline.server.items.Item;
-import com.wurmonline.server.items.ItemList;
-import com.wurmonline.server.items.ItemTemplate;
-import com.wurmonline.server.items.ItemTypes;
+import com.wurmonline.server.items.*;
+import com.wurmonline.server.players.Player;
 import com.wurmonline.shared.constants.IconConstants;
 import com.wurmonline.shared.constants.ItemMaterials;
 import javassist.NotFoundException;
@@ -31,6 +24,8 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -48,6 +43,9 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
     private int itemCap = 1000;
     private short packActionId;
     private static final Map<Creature, Integer> weightBlocker = new HashMap<>();
+    public static boolean setNoDecay;
+    public static boolean setNoDecayFood;
+    private long lastCleanup;
 
     // The following would be nice, but would require big workaround that is arguably not worth the effort for marginal benefit.
     // Get Price after sale from trader is modified from full price.  (Unnecessary ItemBehaviour.action override with edge cases.)
@@ -92,6 +90,12 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
                 logger.warning("Invalid value for max_items.  Must be a non-negative whole number.  Using default of 1000.");
             }
         }
+        val = properties.getProperty("no_decay_in_contract");
+        if (val != null && val.equals("true"))
+            setNoDecay = true;
+        val = properties.getProperty("no_decay_food");
+        if (val != null && val.equals("true"))
+            setNoDecayFood = true;
     }
 
     public static int getTemplateId() {
@@ -282,6 +286,12 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
                 "(JZZ)V",
                 () -> this::destroyItem);
 
+        // Command for server wide cleanup.
+        manager.registerHook("com.wurmonline.server.creatures.Communicator",
+                "reallyHandle_CMD_MESSAGE",
+                "(Ljava/nio/ByteBuffer;)V",
+                () -> this::serverCommand);
+
         try {
             manager.getClassPool().getCtClass("com.wurmonline.server.items.BuyerTradingWindow");
             manager.registerHook("com.wurmonline.server.items.BuyerTradingWindow",
@@ -290,6 +300,42 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
                     () -> this::mayAddFromInventory);
             logger.info("Added hook to Buyer Merchant successfully.");
         } catch (NotFoundException ignored) {}
+    }
+
+    Object serverCommand(Object o, Method method, Object[] args) throws Throwable {
+        Player player = ((Communicator)o).getPlayer();
+
+        if (player != null && player.getPower() >= 2) {
+            ByteBuffer byteBuffer = ((ByteBuffer)args[0]).duplicate();
+            byte[] tempStringArr = new byte[byteBuffer.get() & 255];
+            byteBuffer.get(tempStringArr);
+            String message = new String(tempStringArr, StandardCharsets.UTF_8);
+            if (message.equals("#dcCleanup")) {
+                if (System.currentTimeMillis() - lastCleanup > TimeConstants.MINUTE_MILLIS) {
+                    int count = 0;
+                    for (Item item : Items.getAllItems()) {
+                        if (item.mailed && !WurmMail.isItemInMail(item.getWurmId()) && !isInContract(item)) {
+                            Items.destroyItem(item.getWurmId());
+                            ++count;
+                        }
+                    }
+
+                    lastCleanup = System.currentTimeMillis();
+                    String returnMessage = "Cleaned up " + count + " items.";
+                    player.getCommunicator().sendSafeServerMessage(returnMessage);
+                    logger.info(returnMessage);
+                    return null;
+                }
+                player.getCommunicator().sendSafeServerMessage("You must wait 1 minute before using that command again.");
+                return null;
+            }
+        }
+
+        try {
+            return method.invoke(o, args);
+        } catch (InvocationTargetException e) {
+            throw e.getCause();
+        }
     }
 
     Object destroyItem(Object o, Method method, Object[] args) throws Throwable {
@@ -308,13 +354,24 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
     }
 
     Object behaviourDispatcher(Object o, Method method, Object[] args) throws Throwable {
-        if ((Short)args[4] == packActionId) {
+        Short action = (Short)args[4];
+        if (action == packActionId) {
             try {
                 Item contract = Items.getItem((Long)args[2]);
                 Item target = Items.getItem((Long)args[3]);
 
                 if (contract.getItems().contains(target))
                     return null;
+            } catch (NoSuchItemException ignored) {}
+        } else if (action == Actions.DESTROY) {
+            try {
+                Creature creature = (Creature)args[0];
+                if (creature.getPower() >= 2) {
+                    Item target = Items.getItem((Long)args[3]);
+                    if (target.isMailed() && !WurmMail.isItemInMail(target.getWurmId())) {
+                        target.setMailed(false);
+                    }
+                }
             } catch (NoSuchItemException ignored) {}
         }
 
