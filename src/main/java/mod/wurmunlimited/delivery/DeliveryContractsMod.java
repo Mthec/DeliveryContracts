@@ -24,8 +24,6 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -34,7 +32,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
-public class DeliveryContractsMod implements WurmServerMod, Configurable, PreInitable, Initable, ItemTemplatesCreatedListener, ServerStartedListener {
+public class DeliveryContractsMod implements WurmServerMod, Configurable, PreInitable, Initable, ItemTemplatesCreatedListener, ServerStartedListener, PlayerMessageListener {
     private static final Logger logger = Logger.getLogger(DeliveryContractsMod.class.getName());
     private static int templateId;
     private int contractPrice = MonetaryConstants.COIN_COPPER * 10;
@@ -286,12 +284,6 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
                 "(JZZ)V",
                 () -> this::destroyItem);
 
-        // Command for server wide cleanup.
-        manager.registerHook("com.wurmonline.server.creatures.Communicator",
-                "reallyHandle_CMD_MESSAGE",
-                "(Ljava/nio/ByteBuffer;)V",
-                () -> this::serverCommand);
-
         try {
             manager.getClassPool().getCtClass("com.wurmonline.server.items.BuyerTradingWindow");
             manager.registerHook("com.wurmonline.server.items.BuyerTradingWindow",
@@ -302,40 +294,36 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
         } catch (NotFoundException ignored) {}
     }
 
-    Object serverCommand(Object o, Method method, Object[] args) throws Throwable {
-        Player player = ((Communicator)o).getPlayer();
+    @Override
+    public MessagePolicy onPlayerMessage(Communicator communicator, String message, String title) {
+        Player player = communicator.getPlayer();
 
-        if (player != null && player.getPower() >= 2) {
-            ByteBuffer byteBuffer = ((ByteBuffer)args[0]).duplicate();
-            byte[] tempStringArr = new byte[byteBuffer.get() & 255];
-            byteBuffer.get(tempStringArr);
-            String message = new String(tempStringArr, StandardCharsets.UTF_8);
-            if (message.equals("#dcCleanup")) {
-                if (System.currentTimeMillis() - lastCleanup > TimeConstants.MINUTE_MILLIS) {
-                    int count = 0;
-                    for (Item item : Items.getAllItems()) {
-                        if (item.mailed && !WurmMail.isItemInMail(item.getWurmId()) && !isInContract(item)) {
-                            Items.destroyItem(item.getWurmId());
-                            ++count;
-                        }
+        if (player != null && player.getPower() >= 2 && message.equals("#dcCleanup")) {
+            if (System.currentTimeMillis() - lastCleanup > TimeConstants.MINUTE_MILLIS) {
+                int count = 0;
+                for (Item item : Items.getAllItems()) {
+                    if (item.mailed && !WurmMail.isItemInMail(item.getWurmId()) && !isInContract(item)) {
+                        Items.destroyItem(item.getWurmId());
+                        ++count;
                     }
-
-                    lastCleanup = System.currentTimeMillis();
-                    String returnMessage = "Cleaned up " + count + " items.";
-                    player.getCommunicator().sendSafeServerMessage(returnMessage);
-                    logger.info(returnMessage);
-                    return null;
                 }
-                player.getCommunicator().sendSafeServerMessage("You must wait 1 minute before using that command again.");
-                return null;
+
+                lastCleanup = System.currentTimeMillis();
+                String returnMessage = "Cleaned up " + count + " items.";
+                player.getCommunicator().sendSafeServerMessage(returnMessage);
+                logger.info(returnMessage);
+                return MessagePolicy.DISCARD;
             }
+            player.getCommunicator().sendSafeServerMessage("You must wait 1 minute before using that command again.");
+            return MessagePolicy.DISCARD;
         }
 
-        try {
-            return method.invoke(o, args);
-        } catch (InvocationTargetException e) {
-            throw e.getCause();
-        }
+        return MessagePolicy.PASS;
+    }
+
+    @Override
+    public boolean onPlayerMessage(Communicator communicator, String message) {
+        return false;
     }
 
     Object destroyItem(Object o, Method method, Object[] args) throws Throwable {

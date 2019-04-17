@@ -16,6 +16,7 @@ import com.wurmonline.server.items.ItemTemplate;
 import com.wurmonline.server.items.TradingWindow;
 import com.wurmonline.server.players.Player;
 import org.gotti.wurmunlimited.modloader.ReflectionUtil;
+import org.gotti.wurmunlimited.modloader.interfaces.MessagePolicy;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.stubbing.Answer;
@@ -24,7 +25,6 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
@@ -833,75 +833,8 @@ class DeliveryContractsModTests {
         assertThrows(FakeException.class, () -> handler.invoke(source, method, args1));
     }
 
-    private ByteBuffer getCommand() {
-        byte[] message = "#dcCleanup".getBytes();
-        ByteBuffer byteBuffer = ByteBuffer.allocate(65534);
-        byteBuffer.put((byte)99);
-        byteBuffer.put((byte)message.length);
-        byteBuffer.put(message);
-        byteBuffer.put((byte)message.length);
-        byteBuffer.put(message);
-        return byteBuffer;
-    }
-
-    // TODO - Work out what ByteBuffer needs to be.
-
-//    @Test
-//    void testCleanupCommand() throws Throwable {
-//        DeliveryContractsMod deliveryContractsMod = new DeliveryContractsMod();
-//        Creature player = new Player();
-//        player.power = 2;
-//        Communicator comm = player.getCommunicator();
-//        Items.reset();
-//        int num = 10;
-//        for (int i = 0; i < num; i++) {
-//            Item item = new Item(ItemList.dirtPile);
-//            item.mailed = true;
-//        }
-//
-//        InvocationHandler handler = deliveryContractsMod::serverCommand;
-//        Method method = mock(Method.class);
-//        Object[] args = new Object[] { getCommand() };
-//
-//        assertNull(handler.invoke(comm, method, args));
-//        verify(method, never()).invoke(any(), any());
-//        assertTrue(Arrays.stream(Items.getAllItems()).allMatch(i -> i.getTemplateId() == ItemList.dirtPile && Items.wasDestroyed(i)));
-//        assertTrue(comm.getLastMessage().contains("Cleaned up " + num + " items."));
-//    }
-//
-//    @Test
-//    void testCleanupCommandOncePerMinute() throws Throwable {
-//        DeliveryContractsMod deliveryContractsMod = new DeliveryContractsMod();
-//        Creature player = new Player();
-//        player.power = 2;
-//        Communicator comm = player.getCommunicator();
-//        Items.reset();
-//        int num = 10;
-//        for (int i = 0; i < num; i++) {
-//            Item item = new Item(ItemList.dirtPile);
-//            item.mailed = true;
-//        }
-//
-//        InvocationHandler handler = deliveryContractsMod::serverCommand;
-//        Method method = mock(Method.class);
-//        Object[] args = new Object[] { getCommand() };
-//
-//        ReflectionUtil.setPrivateField(deliveryContractsMod, DeliveryContractsMod.class.getDeclaredField("lastCleanup"), System.currentTimeMillis());
-//        assertNull(handler.invoke(comm, method, args));
-//        verify(method, never()).invoke(any(), any());
-//        assertTrue(Arrays.stream(Items.getAllItems()).noneMatch(i -> i.getTemplateId() == ItemList.dirtPile && Items.wasDestroyed(i)));
-//        assertTrue(comm.getLastMessage().startsWith("You must wait"));
-//
-//        ReflectionUtil.setPrivateField(deliveryContractsMod, DeliveryContractsMod.class.getDeclaredField("lastCleanup"), System.currentTimeMillis() - TimeConstants.MINUTE_MILLIS);
-//        assertNull(handler.invoke(comm, method, args));
-//        verify(method, never()).invoke(any(), any());
-//        assertTrue(Arrays.stream(Items.getAllItems()).allMatch(i -> i.getTemplateId() == ItemList.dirtPile && Items.wasDestroyed(i)));
-//        assertFalse(comm.getLastMessage().startsWith("You must wait"));
-//        assertTrue(comm.getLastMessage().contains("Cleaned up " + num + " items."));
-//    }
-
     @Test
-    void testCleanupCommandOnlyByGM() throws Throwable {
+    void testCleanupCommandOnlyByGM() {
         DeliveryContractsMod deliveryContractsMod = new DeliveryContractsMod();
         Creature player = new Player();
         player.power = 0;
@@ -913,17 +846,12 @@ class DeliveryContractsModTests {
             item.mailed = true;
         }
 
-        InvocationHandler handler = deliveryContractsMod::serverCommand;
-        Method method = mock(Method.class);
-        Object[] args = new Object[] { getCommand() };
-
-        assertNull(handler.invoke(comm, method, args));
-        verify(method, times(1)).invoke(comm, args);
+        assertEquals(MessagePolicy.PASS, deliveryContractsMod.onPlayerMessage(comm, "#doCleanup", ""));
         assertTrue(Arrays.stream(Items.getAllItems()).noneMatch(i -> i.getTemplateId() == ItemList.dirtPile && Items.wasDestroyed(i)));
     }
 
     @Test
-    void testCleanupCommandNotCalledIfDifferentCommand() throws Throwable {
+    void testCleanupCommandNotCalledIfDifferentCommand() {
         DeliveryContractsMod deliveryContractsMod = new DeliveryContractsMod();
         Creature player = new Player();
         player.power = 0;
@@ -935,12 +863,7 @@ class DeliveryContractsModTests {
             item.mailed = true;
         }
 
-        InvocationHandler handler = deliveryContractsMod::serverCommand;
-        Method method = mock(Method.class);
-        Object[] args = new Object[] { getCommand() };
-
-        assertNull(handler.invoke(comm, method, args));
-        verify(method, times(1)).invoke(comm, args);
+        assertEquals(MessagePolicy.PASS, deliveryContractsMod.onPlayerMessage(comm, "#dontDoCleanup", ""));
         assertTrue(Arrays.stream(Items.getAllItems()).noneMatch(i -> i.getTemplateId() == ItemList.dirtPile && Items.wasDestroyed(i)));
     }
 }
