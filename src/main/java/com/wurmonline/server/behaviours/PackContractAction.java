@@ -234,7 +234,9 @@ public class PackContractAction implements ModAction, BehaviourProvider, ActionP
             }
         }
 
+        DeliveryContractsMod.blockWeight.add(target);
         contract.insertItem(target, true);
+        DeliveryContractsMod.blockWeight.remove(target);
         performer.getCommunicator().sendUpdateInventoryItem(target);
         target.setOnBridge(-10L);
         markItemAndSubItems(target);

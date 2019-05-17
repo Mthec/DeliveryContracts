@@ -24,10 +24,7 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Properties;
+import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -44,6 +41,9 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
     public static boolean setNoDecay;
     public static boolean setNoDecayFood;
     private long lastCleanup;
+
+    // TODO - Temp
+    public static final Set<Item> blockWeight = new HashSet<>();
 
     // The following would be nice, but would require big workaround that is arguably not worth the effort for marginal benefit.
     // Get Price after sale from trader is modified from full price.  (Unnecessary ItemBehaviour.action override with edge cases.)
@@ -284,6 +284,22 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
                 "(JZZ)V",
                 () -> this::destroyItem);
 
+
+        manager.registerHook("com.wurmonline.server.items.Item",
+                "getWeightGrams",
+                "()I",
+                () -> this::getWeightGrams);
+
+        manager.registerHook("com.wurmonline.server.items.Item",
+                "getWeightGrams",
+                "(Z)I",
+                () -> this::getWeightGrams);
+
+        manager.registerHook("com.wurmonline.server.items.DbItem",
+                "getWeightGrams",
+                "()I",
+                () -> this::getWeightGrams);
+
         try {
             manager.getClassPool().getCtClass("com.wurmonline.server.items.BuyerTradingWindow");
             manager.registerHook("com.wurmonline.server.items.BuyerTradingWindow",
@@ -445,6 +461,14 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
     Object removeCarriedWeight(Object o, Method method, Object[] args) throws InvocationTargetException, IllegalAccessException {
         if (blockedChangeCarryWeight(o, args))
             return true;
+        return method.invoke(o, args);
+    }
+
+    Object getWeightGrams(Object o, Method method, Object[] args) throws InvocationTargetException, IllegalAccessException {
+        Item item = (Item)o;
+        if (blockWeight.contains(item)) {
+            return 0;
+        }
         return method.invoke(o, args);
     }
 

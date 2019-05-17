@@ -79,11 +79,12 @@ public class DeliverAction implements ModAction, BehaviourProvider, ActionPerfor
                 Item source = Items.getItem(action.getSubjectId());
                 if (source.getItemCount() > 0) {
                     Item[] items = source.getItemsAsArray();
-                    DeliveryContractsMod.addWeightToBlock(performer, Arrays.stream(items).mapToInt(Item::getWeightGrams).sum());
+                    DeliveryContractsMod.blockWeight.addAll(Arrays.asList(items));
                     ItemBehaviour b = (ItemBehaviour)Behaviours.getInstance().getBehaviour(BehaviourList.itemBehaviour);
                     b.action(null, performer, items, Actions.DROP_AS_PILE, 0);
                     Arrays.stream(items).filter(item -> !source.getItems().contains(item))
                             .forEach(this::unMarkItemAndSubItems);
+                    DeliveryContractsMod.blockWeight.removeAll(Arrays.asList(items));
 
                     if (source.getItemCount() == items.length) {
                         // Message sent via ItemBehaviour.
@@ -106,6 +107,8 @@ public class DeliverAction implements ModAction, BehaviourProvider, ActionPerfor
                 performer.getCommunicator().sendNormalServerMessage("The spirits fly around in circles looking confused.");
                 logger.warning("An error occurred when unpacking " + action.getSubjectId() + ":");
                 e.printStackTrace();
+                // TODO - Is this okay?  It should only ever execute in series anyway?
+                DeliveryContractsMod.blockWeight.clear();
                 return true;
             }
         }
