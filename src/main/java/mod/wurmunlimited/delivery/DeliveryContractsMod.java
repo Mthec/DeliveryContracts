@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -115,7 +116,6 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
                             .itemTypes(new short[] {
                                     ItemTypes.ITEM_TYPE_FULLPRICE,
                                     ItemTypes.ITEM_TYPE_INDESTRUCTIBLE,
-                                    ItemTypes.ITEM_TYPE_NODROP,
                                     ItemTypes.ITEM_TYPE_LOADED,
                                     ItemTypes.ITEM_TYPE_NOT_MISSION,
                                     ItemTypes.ITEM_TYPE_HOLLOW,
@@ -300,6 +300,26 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
                 "()I",
                 () -> this::getWeightGrams);
 
+        manager.registerHook("com.wurmonline.server.creatures.Communicator",
+                "reallyHandle_CMD_MOVE_INVENTORY",
+                "(Ljava/nio/ByteBuffer;)V",
+                () -> this::reallyHandle_MOVE);
+
+        manager.registerHook("com.wurmonline.server.behaviours.MethodsItems",
+                "drop",
+                "(Lcom/wurmonline/server/creatures/Creature;Lcom/wurmonline/server/items/Item;Z)[Ljava/lang/String;",
+                () -> this::drop);
+
+        manager.registerHook("com.wurmonline.server.behaviours.MethodsItems",
+                "placeItem",
+                "(Lcom/wurmonline/server/creatures/Creature;Lcom/wurmonline/server/items/Item;Lcom/wurmonline/server/behaviours/Action;F)Z",
+                () -> this::placeItem);
+
+        manager.registerHook("com.wurmonline.server.items.Item",
+                "isNoTake",
+                "()Z",
+                () -> this::isNoTake);
+
         try {
             manager.getClassPool().getCtClass("com.wurmonline.server.items.BuyerTradingWindow");
             manager.registerHook("com.wurmonline.server.items.BuyerTradingWindow",
@@ -308,6 +328,67 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
                     () -> this::mayAddFromInventory);
             logger.info("Added hook to Buyer Merchant successfully.");
         } catch (NotFoundException ignored) {}
+    }
+
+    private Object reallyHandle_MOVE(Object o, Method method, Object[] args) throws InvocationTargetException, IllegalAccessException {
+        ByteBuffer byteBuffer = ((ByteBuffer)args[0]).duplicate();
+        final int nums = byteBuffer.getShort() & 0xFFFF;
+        long[] subjectIds = new long[nums];
+        for (int x = 0; x < nums; ++x) {
+            subjectIds[x] = byteBuffer.getLong();
+        }
+        long targetId = byteBuffer.getLong();
+
+        try {
+            for (long id : subjectIds) {
+                Item item = Items.getItem(id);
+                if (item.getTemplateId() == templateId && !item.isTraded()) {
+                    Item from = item.getTopParentOrNull();
+                    Item to = Items.getItem(targetId).getTopParentOrNull();
+
+                    if (from != null && to != null) {
+                        if (!((from.isInventory() && to.isMailBox()) || to.isInventory())) {
+                            ((Communicator)o).sendSafeServerMessage("You may not drop " + (subjectIds.length == 1 ? "that item" : " at least some of those items") + ".");
+                            return null;
+                        }
+                    }
+                }
+            }
+        } catch (NoSuchItemException e) {
+            logger.warning("Not an item.  This may be okay.");
+            e.printStackTrace();
+        }
+
+        return method.invoke(o, args);
+    }
+
+    private boolean canDrop(Creature creature, Item item) {
+        if (item.getTemplateId() == templateId) {
+            creature.getCommunicator().sendSafeServerMessage("You are not allowed to drop that.");
+            return false;
+        }
+
+        return true;
+    }
+
+    private Object drop(Object o, Method method, Object[] args) throws InvocationTargetException, IllegalAccessException {
+        if (canDrop((Creature)args[0], (Item)args[1])) {
+            return new String[0];
+        }
+        return method.invoke(o, args);
+    }
+
+    private Object placeItem(Object o, Method method, Object[] args) throws InvocationTargetException, IllegalAccessException {
+        if (canDrop((Creature)args[0], (Item)args[1])) {
+            return true;
+        }
+        return method.invoke(o, args);
+    }
+
+    private Object isNoTake(Object o, Method method, Object[] args) throws InvocationTargetException, IllegalAccessException {
+        if (isInContract((Item)o))
+            return false;
+        return method.invoke(o, args);
     }
 
     @Override
@@ -400,7 +481,7 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
         if (maybeContract != null) {
             while (true) {
                 Item parent = maybeContract.getParentOrNull();
-                if (parent == null || parent.getTemplateId() == ItemList.inventory) {
+                if (parent == null || parent.getTemplateId() == ItemList.inventory || parent.isMailBox()) {
                     break;
                 }
                 maybeContract = parent;
@@ -409,12 +490,13 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
 
         return maybeContract != null && maybeContract.getTemplateId() == templateId;
     }
+
     Object mayAddFromInventory(Object o, Method method, Object[] args) throws InvocationTargetException, IllegalAccessException {
         if (isInContract((Item)args[1]))
             return false;
         return method.invoke(o, args);
     }
-
+    
     Object moveToItem(Object o, Method method, Object[] args) throws Throwable {
         try {
             if (isInContract((Item)o) || isInContract(Items.getItem((long)args[1])))

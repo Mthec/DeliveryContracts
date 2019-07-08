@@ -541,4 +541,8 @@ public class Item {
     public boolean isFood() {
         return food;
     }
+
+    public boolean isMailBox() {
+        return templateId >= 510 && templateId <= 513;
+    }
 }
