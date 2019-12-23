@@ -24,7 +24,7 @@ public class Creature {
 
     public long bridgeId = -10;
     private Trade trade;
-    public boolean player = true;
+    public boolean player = false;
     private TradeHandler tradeHandler;
     public boolean onSurface;
     public boolean withinDistance = true;
@@ -185,5 +185,9 @@ public class Creature {
                 return item;
         }
         return null;
+    }
+
+    public boolean isSalesman() {
+        return isNpcTrader();
     }
 }
