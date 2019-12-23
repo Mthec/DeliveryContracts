@@ -22,11 +22,12 @@ class TradingTests extends ActionBehaviourTest {
     void testContentsRemainWhenTrading() throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
         Creature owner = creature;
         Creature merchant = new Creature();
-        merchant.player = false;
+        owner.player = true;
         Economy.addTrader(merchant);
         when(Economy.getEconomy().getShop(merchant).isPersonal()).thenReturn(true);
         when(Economy.getEconomy().getShop(merchant).getOwnerId()).thenReturn(owner.getWurmId());
         Creature player = new Creature();
+        player.player = true;
 
         Method initiateTrade = MethodsCreatures.class.getDeclaredMethod("initiateTrade", Creature.class, Creature.class);
         initiateTrade.setAccessible(true);

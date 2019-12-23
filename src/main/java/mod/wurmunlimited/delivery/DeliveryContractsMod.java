@@ -372,14 +372,14 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
     }
 
     private Object drop(Object o, Method method, Object[] args) throws InvocationTargetException, IllegalAccessException {
-        if (canDrop((Creature)args[0], (Item)args[1])) {
+        if (!canDrop((Creature)args[0], (Item)args[1])) {
             return new String[0];
         }
         return method.invoke(o, args);
     }
 
     private Object placeItem(Object o, Method method, Object[] args) throws InvocationTargetException, IllegalAccessException {
-        if (canDrop((Creature)args[0], (Item)args[1])) {
+        if (!canDrop((Creature)args[0], (Item)args[1])) {
             return true;
         }
         return method.invoke(o, args);
