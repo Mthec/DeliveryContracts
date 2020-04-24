@@ -52,14 +52,13 @@ public class DeliverAction implements ModAction, BehaviourProvider, ActionPerfor
 
     private void unMarkItemAndSubItems(Item item) {
         item.setMailed(false);
-        if (DeliveryContractsMod.setNoDecay) {
+        if (DeliveryContractsMod.setNoDecay || (DeliveryContractsMod.setNoDecayFood && item.isFood())) {
             String description = item.getDescription();
             if (description.endsWith("*"))
                 item.setDescription(description.substring(0, description.length() - 1));
             else
                 item.setHasNoDecay(false);
-        } else if (DeliveryContractsMod.setNoDecayFood && item.isFood())
-            item.setHasNoDecay(false);
+        }
 
         for (Item subItem : item.getItems()) {
             unMarkItemAndSubItems(subItem);

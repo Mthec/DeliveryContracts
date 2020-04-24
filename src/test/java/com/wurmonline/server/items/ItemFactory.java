@@ -1,6 +1,6 @@
 package com.wurmonline.server.items;
 
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.Nullable;
 
 public class ItemFactory {
 

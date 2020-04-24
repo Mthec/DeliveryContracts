@@ -8,8 +8,8 @@ import com.wurmonline.server.items.ItemList;
 import com.wurmonline.server.items.Trade;
 import com.wurmonline.server.villages.Village;
 import com.wurmonline.server.zones.VolaTile;
+import org.jetbrains.annotations.Nullable;
 
-import javax.annotation.Nullable;
 import java.util.logging.Logger;
 
 public class Creature {

@@ -43,7 +43,6 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
     public static boolean setNoDecayFood;
     private long lastCleanup;
 
-    // TODO - Temp
     public static final Set<Item> blockWeight = new HashSet<>();
 
     // The following would be nice, but would require big workaround that is arguably not worth the effort for marginal benefit.

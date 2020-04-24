@@ -245,11 +245,9 @@ public class PackContractAction implements ModAction, BehaviourProvider, ActionP
 
     private void markItemAndSubItems(Item target) {
         target.setMailed(true);
-        if (DeliveryContractsMod.setNoDecay) {
+        if (DeliveryContractsMod.setNoDecay || (DeliveryContractsMod.setNoDecayFood && target.isFood())) {
             if (target.hasNoDecay())
                 target.setDescription(target.getDescription() + "*");
-            target.setHasNoDecay(true);
-        } else if (DeliveryContractsMod.setNoDecayFood && target.isFood()) {
             target.setHasNoDecay(true);
         }
 
