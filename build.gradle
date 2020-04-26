@@ -3,7 +3,7 @@ plugins {
 }
 
 group = 'mod.wurmunlimited.delivery'
-version = '0.5.9-beta'
+version = '0.5.10'
 
 sourceCompatibility = 1.8
 def $shortName = 'deliverycontracts'

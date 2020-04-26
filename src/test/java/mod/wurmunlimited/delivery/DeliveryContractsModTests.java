@@ -866,4 +866,100 @@ class DeliveryContractsModTests {
         assertEquals(MessagePolicy.PASS, deliveryContractsMod.onPlayerMessage(comm, "#dontDoCleanup", ""));
         assertTrue(Arrays.stream(Items.getAllItems()).noneMatch(i -> i.getTemplateId() == ItemList.dirtPile && Items.wasDestroyed(i)));
     }
+
+    @Test
+    void testPollOwned() throws Throwable {
+        DeliveryContractsMod deliveryContractsMod = new DeliveryContractsMod();
+        DeliveryContractsMod.setNoDecay = false;
+        DeliveryContractsMod.setNoDecayFood = false;
+        Creature player = new Player();
+        Item notContract = new Item(contractTemplateId + 1);
+        player.getInventory().insertItem(notContract);
+
+        InvocationHandler handler = deliveryContractsMod::pollOwned;
+        Method method = mock(Method.class);
+        Object[] args = new Object[] { player };
+
+        assertNull(handler.invoke(notContract, method, args));
+    }
+
+    @Test
+    void testPollOwnedDeliveryContract() throws Throwable {
+        DeliveryContractsMod deliveryContractsMod = new DeliveryContractsMod();
+        DeliveryContractsMod.setNoDecay = false;
+        DeliveryContractsMod.setNoDecayFood = false;
+        Creature player = new Player();
+        Item contract = new Item(contractTemplateId);
+
+        InvocationHandler handler = deliveryContractsMod::pollOwned;
+        Method method = mock(Method.class);
+        Object[] args = new Object[] { player };
+
+        assertFalse((boolean)handler.invoke(contract, method, args));
+    }
+
+    @Test
+    void testPollOwnedDeliveryContractNoDecay() throws Throwable {
+        DeliveryContractsMod deliveryContractsMod = new DeliveryContractsMod();
+        DeliveryContractsMod.setNoDecay = true;
+        DeliveryContractsMod.setNoDecayFood = false;
+        Creature player = new Player();
+        Item contract = new Item(contractTemplateId);
+        Item contents = new Item(ItemList.pickAxe);
+        contract.insertItem(contents);
+        player.getInventory().insertItem(contract);
+
+        InvocationHandler handler = deliveryContractsMod::pollOwned;
+        Method method = mock(Method.class);
+        Object[] args = new Object[] { player };
+
+        assertFalse((boolean)handler.invoke(contract, method, args));
+        assertEquals(0, contents.damage);
+    }
+
+    @Test
+    void testPollOwnedDeliveryContractNoFoodDecay() throws Throwable {
+        DeliveryContractsMod deliveryContractsMod = new DeliveryContractsMod();
+        DeliveryContractsMod.setNoDecay = false;
+        DeliveryContractsMod.setNoDecayFood = true;
+        Creature player = new Player();
+        Item contract = new Item(contractTemplateId);
+        Item food = new Item(ItemList.steak);
+        food.food = true;
+        Item contents = new Item(ItemList.pickAxe);
+        contract.insertItem(food);
+        contract.insertItem(contents);
+        player.getInventory().insertItem(contract);
+
+        InvocationHandler handler = deliveryContractsMod::pollOwned;
+        Method method = mock(Method.class);
+        Object[] args = new Object[] { player };
+
+        assertFalse((boolean)handler.invoke(contract, method, args));
+        assertTrue(contents.damage > 0);
+        assertEquals(0, food.damage);
+    }
+
+    @Test
+    void testPollOwnedDeliveryContractBothNoDecay() throws Throwable {
+        DeliveryContractsMod deliveryContractsMod = new DeliveryContractsMod();
+        DeliveryContractsMod.setNoDecay = true;
+        DeliveryContractsMod.setNoDecayFood = true;
+        Creature player = new Player();
+        Item contract = new Item(contractTemplateId);
+        Item food = new Item(ItemList.steak);
+        food.food = true;
+        Item contents = new Item(ItemList.pickAxe);
+        contract.insertItem(food);
+        contract.insertItem(contents);
+        player.getInventory().insertItem(contract);
+
+        InvocationHandler handler = deliveryContractsMod::pollOwned;
+        Method method = mock(Method.class);
+        Object[] args = new Object[] { player };
+
+        assertFalse((boolean)handler.invoke(contract, method, args));
+        assertEquals(0, contents.damage);
+        assertEquals(0, food.damage);
+    }
 }

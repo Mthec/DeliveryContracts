@@ -319,6 +319,11 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
                 "()Z",
                 () -> this::isNoTake);
 
+        manager.registerHook("com.wurmonline.server.items.Item",
+                "pollOwned",
+                "(Lcom/wurmonline/server/creatures/Creature;)Z",
+                () -> this::pollOwned);
+
         try {
             manager.getClassPool().getCtClass("com.wurmonline.server.items.BuyerTradingWindow");
             manager.registerHook("com.wurmonline.server.items.BuyerTradingWindow",
@@ -327,6 +332,21 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
                     () -> this::mayAddFromInventory);
             logger.info("Added hook to Buyer Merchant successfully.");
         } catch (NotFoundException ignored) {}
+    }
+
+    Object pollOwned(Object o, Method method, Object[] args) throws InvocationTargetException, IllegalAccessException {
+        Item maybeContract = (Item)o;
+        Creature owner = (Creature)args[0];
+        if (maybeContract.getTemplateId() == templateId) {
+            for (Item item : maybeContract.getAllItems(true)) {
+                if (!(setNoDecay || (setNoDecayFood && item.isFood()))) {
+                    item.pollOwned(owner);
+                }
+            }
+            return false;
+        } else {
+            return method.invoke(o, args);
+        }
     }
 
     private Object reallyHandle_MOVE(Object o, Method method, Object[] args) throws InvocationTargetException, IllegalAccessException {

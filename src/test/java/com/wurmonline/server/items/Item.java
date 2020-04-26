@@ -31,6 +31,7 @@ public class Item {
     public boolean mailed;
     private long bridgeId = -10;
     public TradingWindow tradeWindow;
+    public float damage = 0f;
 
     // For modification during testing.
     public boolean busy;
@@ -544,5 +545,14 @@ public class Item {
 
     public boolean isMailBox() {
         return templateId >= 510 && templateId <= 513;
+    }
+
+    public void setDamage(float dmg) {
+        damage = dmg;
+    }
+
+    public boolean pollOwned(Creature owner) {
+        setDamage(10f);
+        return true;
     }
 }
