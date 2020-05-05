@@ -324,6 +324,21 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
                 "(Lcom/wurmonline/server/creatures/Creature;)Z",
                 () -> this::pollOwned);
 
+        manager.registerHook("com.wurmonline.server.items.DbItem",
+                "setOwnerStuff",
+                "(Lcom/wurmonline/server/items/ItemTemplate;)V",
+                () -> this::setOwnerStuff);
+
+        manager.registerHook("com.wurmonline.server.items.DbItem",
+                "load",
+                "(Z)V",
+                () -> this::setOwnerStuff);
+
+        manager.registerHook("com.wurmonline.server.items.DbItem",
+                "setWeight",
+                "(IZZ)Z",
+                () -> this::setOwnerStuff);
+
         try {
             manager.getClassPool().getCtClass("com.wurmonline.server.items.BuyerTradingWindow");
             manager.registerHook("com.wurmonline.server.items.BuyerTradingWindow",
@@ -548,6 +563,25 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
                 weightBlocker.remove(owner);
 
                 return null;
+            }
+        } catch (NoSuchPlayerException | NoSuchCreatureException ignored) {}
+        return method.invoke(o, args);
+    }
+
+    // Also, DbItem.load, and DbItem.setWeight.
+    Object setOwnerStuff(Object o, Method method, Object[] args) throws InvocationTargetException, IllegalAccessException {
+        try {
+            Item item = (Item)o;
+            if (item.getOwnerId() != -10) {
+                if (isInContract(item)) {
+                    Creature owner = Server.getInstance().getCreature(item.getOwnerId());
+
+                    weightBlocker.put(owner, item.getWeightGrams());
+                    method.invoke(o, args);
+                    weightBlocker.remove(owner);
+
+                    return null;
+                }
             }
         } catch (NoSuchPlayerException | NoSuchCreatureException ignored) {}
         return method.invoke(o, args);
