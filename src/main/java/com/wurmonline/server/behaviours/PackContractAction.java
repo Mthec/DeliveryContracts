@@ -100,15 +100,16 @@ public class PackContractAction implements ModAction, BehaviourProvider, ActionP
                 return PackResult.TARGET_CANNOT_BE_DROPPED(target.getName());
             }
 
-            if (target.isTent() || target.isCart()) {
+            if (target.isTent() || target.isCart() || target.isBoat()) {
                 Vehicle vehicle = Vehicles.getVehicle(target);
                 if (vehicle != null && vehicle.getDraggers() != null && vehicle.getDraggers().size() > 0) {
                     return PackResult.HITCHED();
                 }
-            }
 
-            if (target.isBoat())
-                return PackResult.TARGET_CANNOT_BE_DROPPED(target.getName());
+                if (vehicle != null && vehicle.isAnySeatOccupied()) {
+                    return PackResult.TARGET_IN_USE(target.getName());
+                }
+            }
 
             try {
                 BlockingResult result = Blocking.getBlockerBetween(performer, target, 4);
@@ -125,7 +126,12 @@ public class PackContractAction implements ModAction, BehaviourProvider, ActionP
                         sameVehicle = true;
                     }
 
-                    if (!sameVehicle && !performer.isWithinDistanceTo(target.getPosX(), target.getPosY(), target.getPosZ(), 5.0F)) {
+                    float maxDistance;
+                    if (target.isBoat())
+                        maxDistance = 8.0f;
+                    else
+                        maxDistance = 5.0f;
+                    if (!sameVehicle && !performer.isWithinDistanceTo(target.getPosX(), target.getPosY(), target.getPosZ(), maxDistance)) {
                         return PackResult.TOO_FAR_AWAY(target.getName());
                     }
 

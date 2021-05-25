@@ -1,6 +1,7 @@
 package com.wurmonline.server.behaviours;
 
 import com.wurmonline.server.Items;
+import com.wurmonline.server.NoSuchItemException;
 import com.wurmonline.server.creatures.Creature;
 import com.wurmonline.server.creatures.NoSuchCreatureException;
 import com.wurmonline.server.items.Item;
@@ -23,7 +24,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class PackContractActionTests extends ActionBehaviourTest {
-    private PackContractAction mod = new PackContractAction((short)1252);
+    private final PackContractAction mod = new PackContractAction((short)1252);
 
     @Test
     void testGetActionId() {
@@ -442,9 +443,21 @@ class PackContractActionTests extends ActionBehaviourTest {
     }
 
     @Test
-    void testBoatsNotPackable() {
+    void testBoatsArePackable() {
         itemToPack.setTemplateId(ItemList.boatRowing);
-        testPackingBlocked("not be delivered");
+        testPackingNotBlocked();
+    }
+
+    @Test
+    void testHasCommanderPassengerPackable() throws NoSuchItemException {
+        Vehicle vehicle = Vehicles.createVehicle(itemToPack);
+        Arrays.stream(vehicle.seats).findAny().orElseThrow(() -> new NoSuchItemException("")).occupy(vehicle, new Creature());
+
+        itemToPack.setTemplateId(ItemList.cartLarge);
+        testPackingBlocked("is in use");
+
+        itemToPack.setTemplateId(ItemList.boatRowing);
+        testPackingBlocked("is in use");
     }
 
     @Test

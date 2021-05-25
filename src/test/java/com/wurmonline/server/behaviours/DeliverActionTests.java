@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class DeliverActionTests extends ActionBehaviourTest {
-    private DeliverAction mod = new DeliverAction((short)1);
+    private final DeliverAction mod = new DeliverAction((short)1);
 
     @Test
     void testGetActionId() {
@@ -55,6 +55,33 @@ class DeliverActionTests extends ActionBehaviourTest {
         Item notPlantedWaystone = new Item(ItemList.waystone);
         assert !notPlantedWaystone.isPlanted();
         assertNull(mod.getBehavioursFor(creature, contract, notPlantedWaystone));
+    }
+
+    @Test
+    void testGetBehavioursForBuoy() {
+        contract.insertItem(itemToPack);
+        itemToPack.setTemplateId(ItemList.caravel);
+        Item buoy = new Item(ItemList.buoy);
+        buoy.setIsPlanted(true);
+        assertNotNull(mod.getBehavioursFor(creature, contract, buoy));
+    }
+
+    @Test
+    void testGetBehavioursForNotPlantedBuoy() {
+        contract.insertItem(itemToPack);
+        itemToPack.setTemplateId(ItemList.caravel);
+        Item notPlantedBuoy = new Item(ItemList.buoy);
+        assert !notPlantedBuoy.isPlanted();
+        assertNull(mod.getBehavioursFor(creature, contract, notPlantedBuoy));
+    }
+
+    @Test
+    void testGetBehavioursForBuoyNotBoat() {
+        contract.insertItem(itemToPack);
+        itemToPack.setTemplateId(ItemList.cartLarge);
+        Item buoy = new Item(ItemList.buoy);
+        buoy.setIsPlanted(true);
+        assertNull(mod.getBehavioursFor(creature, contract, buoy));
     }
 
     // action

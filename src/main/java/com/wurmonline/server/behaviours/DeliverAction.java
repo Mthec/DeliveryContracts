@@ -42,7 +42,8 @@ public class DeliverAction implements ModAction, BehaviourProvider, ActionPerfor
     public List<ActionEntry> getBehavioursFor(Creature performer, Item subject, Item target) {
         if (subject != null && target != null) {
             if (subject.getTemplateId() == DeliveryContractsMod.getTemplateId() && subject.getItemCount() > 0) {
-                if (target.getTemplateId() == ItemList.villageToken || (target.getTemplateId() == ItemList.waystone && target.isPlanted())) {
+                if (target.getTemplateId() == ItemList.villageToken || (target.getTemplateId() == ItemList.waystone && target.isPlanted()) ||
+                            (target.getTemplateId() == ItemList.buoy && target.isPlanted() && subject.getItems().stream().allMatch(Item::isBoat))) {
                     return Collections.singletonList(actionEntry);
                 }
             }
@@ -83,7 +84,7 @@ public class DeliverAction implements ModAction, BehaviourProvider, ActionPerfor
                     b.action(null, performer, items, Actions.DROP_AS_PILE, 0);
                     Arrays.stream(items).filter(item -> !source.getItems().contains(item))
                             .forEach(this::unMarkItemAndSubItems);
-                    DeliveryContractsMod.blockWeight.removeAll(Arrays.asList(items));
+                    Arrays.asList(items).forEach(DeliveryContractsMod.blockWeight::remove);
 
                     if (source.getItemCount() == items.length) {
                         // Message sent via ItemBehaviour.
