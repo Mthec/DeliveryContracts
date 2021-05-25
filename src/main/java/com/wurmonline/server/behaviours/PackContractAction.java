@@ -109,6 +109,10 @@ public class PackContractAction implements ModAction, BehaviourProvider, ActionP
                 if (vehicle != null && vehicle.isAnySeatOccupied()) {
                     return PackResult.TARGET_IN_USE(target.getName());
                 }
+
+                if (target.isMooredBoat()) {
+                    return PackResult.TARGET_IS_MOORED(target.getName());
+                }
             }
 
             try {
@@ -396,7 +400,8 @@ public class PackContractAction implements ModAction, BehaviourProvider, ActionP
             }
             return true;
         }
-        return false;
+
+        return true;
     }
 
     @Override

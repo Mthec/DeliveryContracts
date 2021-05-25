@@ -82,6 +82,10 @@ public class PackResult {
         return new PackResult("The %s is to special.", itemName);
     }
 
+    public static PackResult TARGET_IS_MOORED(String itemName) {
+        return new PackResult("You cannot take the %s as it is moored.", itemName);
+    }
+
     public static PackResult UNKNOWN_FAILURE() {
         return new PackResult(false, "Something went wrong on the server.");
     }

@@ -507,7 +507,7 @@ public class Item {
     }
 
     public boolean isMooredBoat() {
-        return isBoat() && getData() != 1L;
+        return isBoat() && getData() != -1L;
     }
 
     // TODO - Do I need to test these options as well?  Happens in Wurm code so should be okay without.

@@ -445,11 +445,13 @@ class PackContractActionTests extends ActionBehaviourTest {
     @Test
     void testBoatsArePackable() {
         itemToPack.setTemplateId(ItemList.boatRowing);
+        itemToPack.setData(-1L);
+        assert !itemToPack.isMooredBoat();
         testPackingNotBlocked();
     }
 
     @Test
-    void testHasCommanderPassengerPackable() throws NoSuchItemException {
+    void testHasCommanderPassengerNotPackable() throws NoSuchItemException {
         Vehicle vehicle = Vehicles.createVehicle(itemToPack);
         Arrays.stream(vehicle.seats).findAny().orElseThrow(() -> new NoSuchItemException("")).occupy(vehicle, new Creature());
 
@@ -458,6 +460,18 @@ class PackContractActionTests extends ActionBehaviourTest {
 
         itemToPack.setTemplateId(ItemList.boatRowing);
         testPackingBlocked("is in use");
+    }
+
+    @Test
+    void testMooredBoatsNotPackable() throws NoSuchItemException {
+        Vehicle vehicle = Vehicles.createVehicle(itemToPack);
+        Item anchor = new Item(ItemList.anchor);
+        itemToPack.setTemplateId(ItemList.cog);
+        itemToPack.setData(anchor.getWurmId());
+        assert itemToPack.isMooredBoat();
+
+        itemToPack.setTemplateId(ItemList.boatRowing);
+        testPackingBlocked("is moored");
     }
 
     @Test
