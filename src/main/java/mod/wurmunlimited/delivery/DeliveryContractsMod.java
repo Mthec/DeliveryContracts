@@ -373,24 +373,27 @@ public class DeliveryContractsMod implements WurmServerMod, Configurable, PreIni
         }
         long targetId = byteBuffer.getLong();
 
-        try {
-            for (long id : subjectIds) {
-                Item item = Items.getItem(id);
-                if (item.getTemplateId() == templateId && !item.isTraded()) {
-                    Item from = item.getTopParentOrNull();
-                    Item to = Items.getItem(targetId).getTopParentOrNull();
+        // TradeWindow ids.
+        if (targetId < 1 || targetId > 4) {
+            try {
+                for (long id : subjectIds) {
+                    Item item = Items.getItem(id);
+                    if (item.getTemplateId() == templateId && !item.isTraded()) {
+                        Item from = item.getTopParentOrNull();
+                        Item to = Items.getItem(targetId).getTopParentOrNull();
 
-                    if (from != null && to != null) {
-                        if (!((from.isInventory() && to.isMailBox()) || to.isInventory())) {
-                            ((Communicator)o).sendSafeServerMessage("You may not drop " + (subjectIds.length == 1 ? "that item" : " at least some of those items") + ".");
-                            return null;
+                        if (from != null && to != null) {
+                            if (!((from.isInventory() && to.isMailBox()) || to.isInventory())) {
+                                ((Communicator)o).sendSafeServerMessage("You may not drop " + (subjectIds.length == 1 ? "that item" : " at least some of those items") + ".");
+                                return null;
+                            }
                         }
                     }
                 }
+            } catch (NoSuchItemException e) {
+                logger.warning("Not an item.  This may be okay.");
+                e.printStackTrace();
             }
-        } catch (NoSuchItemException e) {
-            logger.warning("Not an item.  This may be okay.");
-            e.printStackTrace();
         }
 
         return method.invoke(o, args);

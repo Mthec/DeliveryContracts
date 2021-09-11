@@ -72,7 +72,7 @@ public class DeliverAction implements ModAction, BehaviourProvider, ActionPerfor
             Village village = Zones.getVillage(performer.getTilePos(), performer.isOnSurface());
             if (village != null && !village.getRoleFor(performer).mayDrop()) {
                 performer.getCommunicator().sendNormalServerMessage("You would not have permission to pickup the items after delivery.");
-                return false;
+                return true;
             }
 
             try {
@@ -100,8 +100,6 @@ public class DeliverAction implements ModAction, BehaviourProvider, ActionPerfor
                         DeliveryContractsMod.removeWeightToBlock(performer, source.getItems().stream().mapToInt(Item::getWeightGrams).sum());
                         performer.getCommunicator().sendNormalServerMessage("The spirits place some of the items in front of you.");
                     }
-
-                    return true;
                 }
             } catch (NoSuchItemException | NoSuchBehaviourException e) {
                 performer.getCommunicator().sendNormalServerMessage("The spirits fly around in circles looking confused.");
@@ -109,10 +107,9 @@ public class DeliverAction implements ModAction, BehaviourProvider, ActionPerfor
                 e.printStackTrace();
                 // TODO - Is this okay?  It should only ever execute in series anyway?
                 DeliveryContractsMod.blockWeight.clear();
-                return true;
             }
         }
-        return false;
+        return true;
     }
 
     @Override
